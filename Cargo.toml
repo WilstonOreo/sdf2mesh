@@ -6,16 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-euclid = "0.22.9"
-wgpu = "0.18.0"
-nalgebra = "0.32.3"
-log = "0.4"
-futures-intrusive = "0.5"
-png = "0.17.10"
-env_logger = "0.10"
-pollster = "0.3"
-encase = "0.6"
 bytemuck = "1.14.0"
+clap = { version = "4.1", features = ["derive","cargo"] }
+encase = "0.6"
+env_logger = "0.10"
+euclid = "0.22.9"
+futures-intrusive = "0.5"
+log = "0.4"
+nalgebra = "0.32.3"
+png = "0.17.10"
+pollster = "0.3"
+wgpu = "0.18.0"
 
 [[bin]]
 name="sdf2mesh"
