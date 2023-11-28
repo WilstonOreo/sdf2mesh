@@ -2,15 +2,39 @@ use std::io::Write;
 extern crate sdf2mesh;
 
 use encase::ShaderType;
-use sdf2mesh::{Bounds3D, Vec3D, mesh::TriangleMeshSampler, mesh::TriangleMesh};
+use sdf2mesh::{
+    mesh::{TriangleMesh, VertexList},
+    Bounds3D, Vec3D,
+};
 
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(author = "Michael Winkelmann", version, about = "sdf2mesh")]
+struct Arguments {
+    /// Input SDF file
+    #[arg(short = 'i', long)]
+    sdf: String,
+
+    /// Recipient TOML file (optional)
+    #[arg(short = 'o', long)]
+    mesh: String,
+
+    /// Optional latex output file
+    #[arg(long)]
+    debug_png: String,
+
+    /// Grid resolution. Default: 256x256x256
+    #[arg(short = 'd', long)]
+    resolution: Option<u32>,
+}
 
 #[derive(Debug, ShaderType, Clone, Copy)]
 struct Vec4 {
     x: f32,
     y: f32,
     z: f32,
-    w: f32 
+    w: f32,
 }
 
 #[derive(Debug, ShaderType, Clone, Copy)]
@@ -18,9 +42,8 @@ struct Dims {
     x: u32,
     y: u32,
     z: u32,
-    z_slice_idx: u32 
+    z_slice_idx: u32,
 }
-
 
 #[derive(Debug, ShaderType)]
 struct AppState {
@@ -28,8 +51,6 @@ struct AppState {
     pub bb_max: Vec4,
     pub dims: Dims,
 }
-
-
 
 impl AppState {
     // Translating Rust structures to WGSL is always tricky and can prove
@@ -70,14 +91,28 @@ impl Default for AppState {
 
         let min = bounds.min().to_f32();
         let max = bounds.max().to_f32();
-        AppState { 
-            bb_min: Vec4 { x: min.x, y: min.y, z: min.z, /* z */ w: 0.0 },
-            bb_max: Vec4 { x: max.x, y: max.y, z: max.z, /* eps */ w : 0.0001 }, 
-            dims: Dims { x: 128, y: 128, z: 128, z_slice_idx: 0 } 
+        AppState {
+            bb_min: Vec4 {
+                x: min.x,
+                y: min.y,
+                z: min.z,
+                /* z */ w: 0.0,
+            },
+            bb_max: Vec4 {
+                x: max.x,
+                y: max.y,
+                z: max.z,
+                /* eps */ w: 0.0001,
+            },
+            dims: Dims {
+                x: 128,
+                y: 128,
+                z: 128,
+                z_slice_idx: 0,
+            },
         }
     }
 }
-
 
 struct Rgba32FloatTextureStorage {
     data: Vec<f32>,
@@ -120,13 +155,18 @@ impl Rgba32FloatTextureStorage {
             texture,
             view,
             buffer,
-            binding_id
+            binding_id,
         }
     }
 
     fn get_rgba(&self, x: u32, y: u32) -> (f32, f32, f32, f32) {
         let idx = ((y * (self.dims.0 as u32) + x) * 4) as usize;
-        (self.data[idx], self.data[idx+1], self.data[idx + 2], self.data[idx + 3]) 
+        (
+            self.data[idx],
+            self.data[idx + 1],
+            self.data[idx + 2],
+            self.data[idx + 3],
+        )
     }
 
     fn bind_group_layout_entry(&self) -> wgpu::BindGroupLayoutEntry {
@@ -170,7 +210,7 @@ impl Rgba32FloatTextureStorage {
                 width: self.dims.0 as u32,
                 height: self.dims.1 as u32,
                 depth_or_array_layers: 1,
-            }
+            },
         );
     }
 
@@ -187,8 +227,6 @@ impl Rgba32FloatTextureStorage {
         }
         self.buffer.unmap();
     }
-
-
 }
 
 trait ToPngImage {
@@ -196,25 +234,27 @@ trait ToPngImage {
 }
 
 impl ToPngImage for Rgba32FloatTextureStorage {
-
     fn to_png_image(&self, path: impl AsRef<std::path::Path>) {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let image_data = self.data.iter().map(|f| (*f * 127.0 + 128.0).clamp(0.0, 255.0) as u8).collect();
-            output_image_native(
-                image_data, 
-                self.dims,
-                path,
-            );
+            let image_data = self
+                .data
+                .iter()
+                .map(|f| (*f * 127.0 + 128.0).clamp(0.0, 255.0) as u8)
+                .collect();
+            output_image_native(image_data, self.dims, path);
         }
         #[cfg(target_arch = "wasm32")]
-        output_image_wasm(self.data.to_vec(), self.dims);    
+        output_image_wasm(self.data.to_vec(), self.dims);
     }
-
 }
 
 /// Replaces the site body with a message telling the user to open the console and use that.
-pub fn output_image_native(image_data: Vec<u8>, texture_dims: (usize, usize), path: impl AsRef<std::path::Path>) {
+pub fn output_image_native(
+    image_data: Vec<u8>,
+    texture_dims: (usize, usize),
+    path: impl AsRef<std::path::Path>,
+) {
     let mut png_data = Vec::<u8>::with_capacity(image_data.len());
     let mut encoder = png::Encoder::new(
         std::io::Cursor::new(&mut png_data),
@@ -231,7 +271,6 @@ pub fn output_image_native(image_data: Vec<u8>, texture_dims: (usize, usize), pa
     file.write_all(&png_data[..]).unwrap();
     log::info!("PNG file written to disc as \"{:?}\".", &path.as_ref());
 }
-
 
 async fn run(_path: Option<String>) {
     let mut state = AppState::default();
@@ -258,8 +297,10 @@ async fn run(_path: Option<String>) {
         source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!("shader.wgsl"))),
     });
 
-    let mut normal_texture = Rgba32FloatTextureStorage::new(&device, (state.dims.x as usize, state.dims.y as usize), 1);
-    let mut position_texture = Rgba32FloatTextureStorage::new(&device, (state.dims.x as usize, state.dims.y as usize), 2);
+    let mut normal_texture =
+        Rgba32FloatTextureStorage::new(&device, (state.dims.x as usize, state.dims.y as usize), 1);
+    let mut position_texture =
+        Rgba32FloatTextureStorage::new(&device, (state.dims.x as usize, state.dims.y as usize), 2);
 
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: None,
@@ -318,16 +359,16 @@ async fn run(_path: Option<String>) {
     log::info!("Wgpu context set up.");
 
     let mut vertex_items = VertexList::default();
-    
+
     //----------------------------------------
     for z_slice_idx in 0..state.dims.z {
         state.set_z(z_slice_idx);
         queue.write_buffer(
             &uniform_buffer,
             0,
-            &state.as_wgsl_bytes().expect(
-                "Error in encase translating AppState struct to WGSL bytes.",
-            ),
+            &state
+                .as_wgsl_bytes()
+                .expect("Error in encase translating AppState struct to WGSL bytes."),
         );
 
         let mut command_encoder =
@@ -353,23 +394,22 @@ async fn run(_path: Option<String>) {
             for x in 0..state.dims.x {
                 use sdf2mesh::Vertex;
 
-                let p = position_texture.get_rgba(x,y);
+                let p = position_texture.get_rgba(x, y);
 
                 if p.3 > 0.0 {
-                    let n = normal_texture.get_rgba(x,y);
-                    let vertex = Vertex { 
+                    let n = normal_texture.get_rgba(x, y);
+                    let vertex = Vertex {
                         normal: Vec3D::new(n.0 as f64, n.1 as f64, n.2 as f64),
-                        pos: Vec3D::new(p.0 as f64, p.1 as f64, p.2 as f64) 
+                        pos: Vec3D::new(p.0 as f64, p.1 as f64, p.2 as f64),
                     };
                     let cell = (x as u16, y as u16, z_slice_idx as u16);
                     let s = n.3 as u32;
                     let sign_changes = (s & 1 != 0, s & 2 != 0, s & 4 != 0, s & 8 != 0);
 
-                    vertex_items.insert( cell, sign_changes, vertex );
+                    vertex_items.insert(cell, sign_changes, vertex);
                 }
             }
         }
-
 
         //normal_texture.to_png_image(format!("{path}{idx:04}_normal.png", path = _path.as_ref().unwrap(), idx = z_slice_idx));
         //position_texture.to_png_image(format!("{path}{idx:04}_position.png", path = _path.as_ref().unwrap(), idx = z_slice_idx));
@@ -380,8 +420,12 @@ async fn run(_path: Option<String>) {
     let vertices = vertex_items.fetch_vertices();
     let triangle_indices = vertex_items.fetch_triangle_indices();
 
-    let mesh = TriangleMesh { vertices, triangle_indices };
-    mesh.write_ply_to_file("shader_test.ply").expect("Could not write PLY file!");
+    let mesh = TriangleMesh {
+        vertices,
+        triangle_indices,
+    };
+    mesh.write_ply_to_file("shader_test.ply")
+        .expect("Could not write PLY file!");
 
     log::info!("Done.")
 }
