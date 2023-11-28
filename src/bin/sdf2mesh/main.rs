@@ -399,8 +399,8 @@ async fn run(_path: Option<String>) {
                 if p.3 > 0.0 {
                     let n = normal_texture.get_rgba(x, y);
                     let vertex = Vertex {
-                        normal: Vec3D::new(n.0 as f64, n.1 as f64, n.2 as f64),
-                        pos: Vec3D::new(p.0 as f64, p.1 as f64, p.2 as f64),
+                        normal: Vec3D::new(n.0, n.1, n.2),
+                        pos: Vec3D::new(p.0, p.1, p.2),
                     };
                     let cell = (x as u16, y as u16, z_slice_idx as u16);
                     let s = n.3 as u32;
