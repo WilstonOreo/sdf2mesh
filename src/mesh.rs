@@ -3,25 +3,35 @@ use std::io::Write;
 use crate::*;
 
 pub struct STLWriter<'a> {
-    writer: &'a mut dyn Write
+    writer: &'a mut dyn Write,
 }
 
 impl<'a> STLWriter<'a> {
     pub fn new(mut w: &'a mut dyn Write) -> Self {
         writeln!(&mut w, "solid").unwrap();
 
-        Self {
-            writer: w
-        }
+        Self { writer: w }
     }
 
     pub fn write_triangle(&mut self, tri: &Triangle<Vertex>) -> std::io::Result<()> {
         let n = tri.normal();
         writeln!(&mut self.writer, "facet normal {} {} {}", n.x, n.y, n.z)?;
         writeln!(&mut self.writer, "\touter loop")?;
-        writeln!(&mut self.writer, "\t\tvertex {} {} {}", tri.0.pos.x, tri.0.pos.y, tri.0.pos.z)?;
-        writeln!(&mut self.writer, "\t\tvertex {} {} {}", tri.1.pos.x, tri.1.pos.y, tri.1.pos.z)?;
-        writeln!(&mut self.writer, "\t\tvertex {} {} {}", tri.2.pos.x, tri.2.pos.y, tri.2.pos.z)?;
+        writeln!(
+            &mut self.writer,
+            "\t\tvertex {} {} {}",
+            tri.0.pos.x, tri.0.pos.y, tri.0.pos.z
+        )?;
+        writeln!(
+            &mut self.writer,
+            "\t\tvertex {} {} {}",
+            tri.1.pos.x, tri.1.pos.y, tri.1.pos.z
+        )?;
+        writeln!(
+            &mut self.writer,
+            "\t\tvertex {} {} {}",
+            tri.2.pos.x, tri.2.pos.y, tri.2.pos.z
+        )?;
         writeln!(&mut self.writer, "\tendloop")?;
         writeln!(&mut self.writer, "endfacet")?;
         Ok(())
@@ -35,7 +45,7 @@ impl<'a> Drop for STLWriter<'a> {
 }
 
 pub struct PLYWriter<'a> {
-    writer: &'a mut dyn Write
+    writer: &'a mut dyn Write,
 }
 
 impl<'a> PLYWriter<'a> {
@@ -44,9 +54,7 @@ impl<'a> PLYWriter<'a> {
         writeln!(&mut w, "format ascii 1.0")?;
         writeln!(&mut w, "comment written by rust-sdf")?;
 
-        Ok(Self {
-            writer: w
-        })
+        Ok(Self { writer: w })
     }
 
     pub fn header_element_vertex3d(&mut self, len: usize) -> std::io::Result<()> {
@@ -57,7 +65,7 @@ impl<'a> PLYWriter<'a> {
         writeln!(&mut self.writer, "property float nx")?;
         writeln!(&mut self.writer, "property float ny")?;
         writeln!(&mut self.writer, "property float nz")?;
-        Ok(())   
+        Ok(())
     }
 
     pub fn header_element_vertex3d_with_colors(&mut self, len: usize) -> std::io::Result<()> {
@@ -65,13 +73,13 @@ impl<'a> PLYWriter<'a> {
         writeln!(&mut self.writer, "property uchar red")?;
         writeln!(&mut self.writer, "property uchar green")?;
         writeln!(&mut self.writer, "property uchar blue")?;
-        Ok(())   
+        Ok(())
     }
 
     pub fn header_element_face(&mut self, len: usize) -> std::io::Result<()> {
         writeln!(&mut self.writer, "element face {len}")?;
-        writeln!(&mut self.writer, "property list uchar int vertex_index")?;  
-        Ok(())   
+        writeln!(&mut self.writer, "property list uchar int vertex_index")?;
+        Ok(())
     }
 
     pub fn header_end(&mut self) -> std::io::Result<()> {
@@ -80,7 +88,11 @@ impl<'a> PLYWriter<'a> {
     }
 
     pub fn vertex(&mut self, v: &Vertex) -> std::io::Result<()> {
-        writeln!(&mut self.writer, "{} {} {} {} {} {}", v.pos.x, v.pos.y, v.pos.z, v.normal.x, v.normal.y, v.normal.z)?;
+        writeln!(
+            &mut self.writer,
+            "{} {} {} {} {} {}",
+            v.pos.x, v.pos.y, v.pos.z, v.normal.x, v.normal.y, v.normal.z
+        )?;
         Ok(())
     }
 
@@ -91,11 +103,24 @@ impl<'a> PLYWriter<'a> {
         Ok(())
     }
 
-    pub fn vertex_color<T: std::fmt::Display>(&mut self, v: &Vertex, color: &(T,T,T)) -> std::io::Result<()> {
-        writeln!(&mut self.writer, "{} {} {} {} {} {} {} {} {}",
-            v.pos.x, v.pos.y, v.pos.z,
-            v.normal.x, v.normal.y, v.normal.z,
-            color.0, color.1, color.2)?;
+    pub fn vertex_color<T: std::fmt::Display>(
+        &mut self,
+        v: &Vertex,
+        color: &(T, T, T),
+    ) -> std::io::Result<()> {
+        writeln!(
+            &mut self.writer,
+            "{} {} {} {} {} {} {} {} {}",
+            v.pos.x,
+            v.pos.y,
+            v.pos.z,
+            v.normal.x,
+            v.normal.y,
+            v.normal.z,
+            color.0,
+            color.1,
+            color.2
+        )?;
         Ok(())
     }
 
@@ -114,8 +139,8 @@ impl<'a> PLYWriter<'a> {
 
 #[derive(Default)]
 pub struct TriangleMesh {
-    pub vertices: Vec<Vertex>, // TODO remove pub
-    pub triangle_indices: Vec<Triangle<u32>> // TODO remove pub
+    pub vertices: Vec<Vertex>,                // TODO remove pub
+    pub triangle_indices: Vec<Triangle<u32>>, // TODO remove pub
 }
 
 impl TriangleMesh {
@@ -127,7 +152,11 @@ impl TriangleMesh {
     pub fn fetch_triangles(&self) -> Vec<Triangle<Vertex>> {
         let mut triangles = Vec::with_capacity(self.triangle_indices.len());
         for t in &self.triangle_indices {
-            triangles.push(Triangle(self.vertices[t.0 as usize], self.vertices[t.1 as usize], self.vertices[t.2 as usize]));
+            triangles.push(Triangle(
+                self.vertices[t.0 as usize],
+                self.vertices[t.1 as usize],
+                self.vertices[t.2 as usize],
+            ));
         }
         triangles
     }
@@ -156,15 +185,14 @@ impl TriangleMesh {
         ply_writer.header_element_vertex3d(self.vertices.len())?;
         ply_writer.header_element_face(self.triangle_indices.len())?;
         ply_writer.header_end()?;
-    
+
         ply_writer.vertices(&self.vertices)?;
         ply_writer.tri_faces(&self.triangle_indices)
     }
 }
 
-
 pub struct VertexListItem {
-    pub cell: (u16,u16,u16),
+    pub cell: (u16, u16, u16),
     pub sign_changes: (bool, bool, bool, bool),
     pub vertex: Vertex,
 }
@@ -179,13 +207,21 @@ impl VertexListItem {
     }
 }
 
-
 #[derive(Default)]
 pub struct VertexList(Vec<VertexListItem>);
 
 impl VertexList {
-    pub fn insert(&mut self, cell: (u16, u16, u16), sign_changes: (bool, bool, bool, bool), vertex: Vertex) {
-        self.0.push(VertexListItem { cell, sign_changes, vertex });
+    pub fn insert(
+        &mut self,
+        cell: (u16, u16, u16),
+        sign_changes: (bool, bool, bool, bool),
+        vertex: Vertex,
+    ) {
+        self.0.push(VertexListItem {
+            cell,
+            sign_changes,
+            vertex,
+        });
     }
 
     pub fn len(&self) -> usize {
@@ -220,41 +256,46 @@ impl VertexList {
                     self.vertex_index(x, y, z - 1),
                     self.vertex_index(x, y, z),
                     self.vertex_index(x, y - 1, z),
-                ).swap(changes.0);
+                )
+                .swap(changes.0);
                 let tris = quad.make_triangles();
                 indices.push(tris.0);
                 indices.push(tris.1);
             }
-     
+
             if changes.1 != changes.3 && x > 0 && z > 0 {
                 let quad = Quad(
-                    self.vertex_index(x - 1, y,z - 1),
-                    self.vertex_index(x, y,z - 1),
-                    self.vertex_index(x, y,z),
-                    self.vertex_index(x - 1, y,z),
-                ).swap(!changes.1);
+                    self.vertex_index(x - 1, y, z - 1),
+                    self.vertex_index(x, y, z - 1),
+                    self.vertex_index(x, y, z),
+                    self.vertex_index(x - 1, y, z),
+                )
+                .swap(!changes.1);
                 let tris = quad.make_triangles();
                 indices.push(tris.0);
                 indices.push(tris.1);
             }
-    
+
             if changes.2 != changes.3 && x > 0 && y > 0 {
                 let quad = Quad(
-                    self.vertex_index(x - 1, y-1,z),
-                    self.vertex_index(x, y-1,z),
-                    self.vertex_index(x, y,z),
-                    self.vertex_index(x - 1, y,z),
-                ).swap(changes.2);
+                    self.vertex_index(x - 1, y - 1, z),
+                    self.vertex_index(x, y - 1, z),
+                    self.vertex_index(x, y, z),
+                    self.vertex_index(x - 1, y, z),
+                )
+                .swap(changes.2);
                 let tris = quad.make_triangles();
                 indices.push(tris.0);
                 indices.push(tris.1);
-            }   
+            }
         }
 
         indices
     }
 
     fn vertex_index(&self, x: u16, y: u16, z: u16) -> u32 {
-        self.0.binary_search_by_key(&VertexListItem::compute_index(x, y, z), |item| item.index()).unwrap() as u32
-   }
+        self.0
+            .binary_search_by_key(&VertexListItem::compute_index(x, y, z), |item| item.index())
+            .unwrap() as u32
+    }
 }
