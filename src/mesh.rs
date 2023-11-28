@@ -242,7 +242,7 @@ impl VertexList {
     }
 
     pub fn fetch_triangle_indices(&self) -> Vec<Triangle<u32>> {
-        let mut indices = Vec::with_capacity(self.0.len() / 2);
+        let mut indices = Vec::with_capacity(self.0.len() * 2);
 
         for vertex_item in &self.0 {
             let changes = vertex_item.sign_changes;
