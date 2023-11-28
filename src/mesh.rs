@@ -299,3 +299,12 @@ impl VertexList {
             .unwrap() as u32
     }
 }
+
+impl From<VertexList> for TriangleMesh {
+    fn from(l: VertexList) -> Self {
+        TriangleMesh {
+            vertices: l.fetch_vertices(),
+            triangle_indices: l.fetch_triangle_indices(),
+        }
+    }
+}

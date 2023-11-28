@@ -417,14 +417,9 @@ async fn run(_path: Option<String>) {
         queue.submit(Some(command_encoder.finish()));
     }
     log::info!("Have {} vertices.", vertex_items.len());
-    let vertices = vertex_items.fetch_vertices();
-    let triangle_indices = vertex_items.fetch_triangle_indices();
 
-    let mesh = TriangleMesh {
-        vertices,
-        triangle_indices,
-    };
-    mesh.write_ply_to_file("shader_test.ply")
+    TriangleMesh::from(vertex_items)
+        .write_ply_to_file("shader_test.ply")
         .expect("Could not write PLY file!");
 
     log::info!("Done.")
