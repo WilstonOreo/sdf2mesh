@@ -168,7 +168,6 @@ impl TriangleMesh {
 
 }
 
-pub struct TriangleMeshSampler;
 
 pub struct VertexListItem {
     pub cell: (u16,u16,u16),
@@ -187,11 +186,35 @@ impl VertexListItem {
 }
 
 
-impl TriangleMeshSampler {
-    pub fn fetch_triangle_indices(vertex_items: &Vec<VertexListItem>) -> Vec<Triangle<u32>> {
-        let mut indices = Vec::new();
+#[derive(Default)]
+pub struct VertexList(Vec<VertexListItem>);
 
-        for vertex_item in vertex_items {
+impl VertexList {
+    pub fn insert(&mut self, cell: (u16, u16, u16), sign_changes: (bool, bool, bool, bool), vertex: Vertex) {
+        self.0.push(VertexListItem { cell, sign_changes, vertex });
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn fetch_vertices(&self) -> Vec<Vertex> {
+        let mut vertices = Vec::with_capacity(self.len());
+        for vertex_item in &self.0 {
+            vertices.push(vertex_item.vertex);
+        }
+        vertices
+    }
+
+    pub fn fetch_triangle_indices(&self) -> Vec<Triangle<u32>> {
+        let mut indices = Vec::with_capacity(self.0.len() / 2);
+
+        for vertex_item in &self.0 {
             let changes = vertex_item.sign_changes;
             let x = vertex_item.cell.0;
             let y = vertex_item.cell.1;
@@ -199,10 +222,10 @@ impl TriangleMeshSampler {
 
             if changes.0 != changes.3 && y > 0 && z > 0 {
                 let quad = Quad(
-                    Self::vertex_index(vertex_items, x, y - 1, z - 1),
-                    Self::vertex_index(vertex_items, x, y, z - 1),
-                    Self::vertex_index(vertex_items, x, y, z),
-                    Self::vertex_index(vertex_items, x, y - 1, z),
+                    self.vertex_index(x, y - 1, z - 1),
+                    self.vertex_index(x, y, z - 1),
+                    self.vertex_index(x, y, z),
+                    self.vertex_index(x, y - 1, z),
                 ).swap(changes.0);
                 let tris = quad.make_triangles();
                 indices.push(tris.0);
@@ -211,10 +234,10 @@ impl TriangleMeshSampler {
      
             if changes.1 != changes.3 && x > 0 && z > 0 {
                 let quad = Quad(
-                    Self::vertex_index(vertex_items, x - 1, y,z - 1),
-                    Self::vertex_index(vertex_items, x, y,z - 1),
-                    Self::vertex_index(vertex_items, x, y,z),
-                    Self::vertex_index(vertex_items, x - 1, y,z),
+                    self.vertex_index(x - 1, y,z - 1),
+                    self.vertex_index(x, y,z - 1),
+                    self.vertex_index(x, y,z),
+                    self.vertex_index(x - 1, y,z),
                 ).swap(!changes.1);
                 let tris = quad.make_triangles();
                 indices.push(tris.0);
@@ -223,10 +246,10 @@ impl TriangleMeshSampler {
     
             if changes.2 != changes.3 && x > 0 && y > 0 {
                 let quad = Quad(
-                    Self::vertex_index(vertex_items,x - 1, y-1,z),
-                    Self::vertex_index(vertex_items,x, y-1,z),
-                    Self::vertex_index(vertex_items,x, y,z),
-                    Self::vertex_index(vertex_items,x - 1, y,z),
+                    self.vertex_index(x - 1, y-1,z),
+                    self.vertex_index(x, y-1,z),
+                    self.vertex_index(x, y,z),
+                    self.vertex_index(x - 1, y,z),
                 ).swap(changes.2);
                 let tris = quad.make_triangles();
                 indices.push(tris.0);
@@ -237,7 +260,7 @@ impl TriangleMeshSampler {
         indices
     }
 
-    fn vertex_index(vertex_items: &[VertexListItem], x: u16, y: u16, z: u16) -> u32 {
-        vertex_items.binary_search_by_key(&VertexListItem::compute_index(x, y, z), |item| item.index()).unwrap() as u32
+    fn vertex_index(&self, x: u16, y: u16, z: u16) -> u32 {
+        self.0.binary_search_by_key(&VertexListItem::compute_index(x, y, z), |item| item.index()).unwrap() as u32
    }
 }
