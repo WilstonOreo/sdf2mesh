@@ -1,29 +1,9 @@
 extern crate sdf2mesh;
 
 use encase::ShaderType;
-use sdf2mesh::*;
+use sdf2mesh::{png::ToPngFile, *};
 
 use clap::Parser;
-
-#[derive(Parser, Debug)]
-#[command(author = "Michael Winkelmann", version, about = "sdf2mesh")]
-struct Arguments {
-    /// Input SDF file
-    #[arg(short = 'i', long)]
-    sdf: String,
-
-    /// Recipient TOML file (optional)
-    #[arg(short = 'o', long)]
-    mesh: String,
-
-    /// Optional latex output file
-    #[arg(long)]
-    debug_png: String,
-
-    /// Grid resolution. Default: 256x256x256
-    #[arg(short = 'd', long)]
-    resolution: Option<u32>,
-}
 
 #[derive(Debug, ShaderType, Clone, Copy)]
 struct Vec4 {
@@ -85,8 +65,8 @@ impl Default for AppState {
     fn default() -> Self {
         let bounds = Bounds3D::centered(&Vec3D::new(2.0, 2.0, 2.0));
 
-        let min = bounds.min().to_f32();
-        let max = bounds.max().to_f32();
+        let min = bounds.min();
+        let max = bounds.max();
         AppState {
             bb_min: Vec4 {
                 x: min.x,
@@ -110,9 +90,67 @@ impl Default for AppState {
     }
 }
 
+#[derive(Parser, Debug)]
+#[command(author = "Michael Winkelmann", version, about = "sdf2mesh")]
+struct Arguments {
+    /// Input SDF file
+    #[arg(short = 'i', long)]
+    sdf: String,
 
-async fn run(_path: Option<String>) {
-    let mut state = AppState::default();
+    /// Recipient TOML file (optional)
+    #[arg(short = 'o', long)]
+    mesh: String,
+
+    /// Optional latex output file
+    #[arg(long)]
+    debug_png: Option<String>,
+
+    /// Grid resolution. Default: 256
+    #[arg(short = 'r', long)]
+    resolution: Option<u32>,
+
+    /// Size of bounding box. Default: 2
+    #[arg(short = 'b')]
+    bounds: Option<f32>,
+}
+
+impl From<&Arguments> for AppState {
+    fn from(args: &Arguments) -> Self {
+        let mut res = args.resolution.unwrap_or(256);
+        if res.count_ones() > 1 {
+            res = 2 << res.ilog2();
+            log::warn!("Resolution should be a power of 2 (actual resolution : {})", res);
+        }
+
+        let bounds = Bounds3D::cube(args.bounds.unwrap_or(2.0), &Vec3D::zero());
+        let min = bounds.min();
+        let max = bounds.max();
+
+        AppState {
+            bb_min: Vec4 {
+                x: min.x,
+                y: min.y,
+                z: min.z,
+                /* z */ w: 0.0,
+            },
+            bb_max: Vec4 {
+                x: max.x,
+                y: max.y,
+                z: max.z,
+                /* eps */ w: 0.0001,
+            },
+            dims: Dims {
+                x: res,
+                y: res,
+                z: res,
+                z_slice_idx: 0u32,
+            },
+        }
+    }
+}
+
+async fn run(args: Arguments) {
+    let mut state = AppState::from(&args);
 
     let instance = wgpu::Instance::default();
     let adapter = instance
@@ -248,31 +286,29 @@ async fn run(_path: Option<String>) {
             }
         }
 
-        //normal_texture.to_png_image(format!("{path}{idx:04}_normal.png", path = _path.as_ref().unwrap(), idx = z_slice_idx));
-        //position_texture.to_png_image(format!("{path}{idx:04}_position.png", path = _path.as_ref().unwrap(), idx = z_slice_idx));
+        if let Some(path) = &args.debug_png {
+            normal_texture.to_png_file(format!("{path}{z_slice_idx:04}_normal.png"));
+            position_texture.to_png_file(format!("{path}{z_slice_idx:04}_position.png"));
+        }
 
         queue.submit(Some(command_encoder.finish()));
     }
-    log::info!("Have {} vertices.", vertex_items.len());
+    log::info!("Mesh as {} vertices.", vertex_items.len());
 
     mesh::TriangleMesh::from(vertex_items)
-        .write_ply_to_file("shader_test.ply")
+        .write_ply_to_file(&args.mesh)
         .expect("Could not write PLY file!");
 
-    log::info!("Done.")
+    log::info!("Mesh written to {}", args.mesh)
 }
 
 pub fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        env_logger::builder()
-            .filter_level(log::LevelFilter::Info)
-            .format_timestamp_nanos()
-            .init();
+    let args = Arguments::parse();
 
-        let path = std::env::args()
-            .nth(1)
-            .unwrap_or_else(|| "please_don't_git_push_me.png".to_string());
-        pollster::block_on(run(Some(path)));
-    }
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .format_timestamp_nanos()
+        .init();
+
+    pollster::block_on(run(args));
 }
