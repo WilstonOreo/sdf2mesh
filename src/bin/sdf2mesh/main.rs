@@ -317,8 +317,8 @@ async fn run(_path: Option<String>) {
 
     log::info!("Wgpu context set up.");
 
-    let mut vertex_items = Vec::with_capacity((state.dims.x * state.dims.y) as usize);
-
+    let mut vertex_items = VertexList::default();
+    
     //----------------------------------------
     for z_slice_idx in 0..state.dims.z {
         state.set_z(z_slice_idx);
@@ -352,7 +352,6 @@ async fn run(_path: Option<String>) {
         for y in 0..state.dims.y {
             for x in 0..state.dims.x {
                 use sdf2mesh::Vertex;
-                use sdf2mesh::mesh::VertexListItem;
 
                 let p = position_texture.get_rgba(x,y);
 
@@ -366,7 +365,7 @@ async fn run(_path: Option<String>) {
                     let s = n.3 as u32;
                     let sign_changes = (s & 1 != 0, s & 2 != 0, s & 4 != 0, s & 8 != 0);
 
-                    vertex_items.push(VertexListItem { cell, sign_changes, vertex });
+                    vertex_items.insert( cell, sign_changes, vertex );
                 }
             }
         }
@@ -378,18 +377,11 @@ async fn run(_path: Option<String>) {
         queue.submit(Some(command_encoder.finish()));
     }
     log::info!("Have {} vertices.", vertex_items.len());
-    let mut vertices = Vec::new();
-    let triangle_indices = TriangleMeshSampler::fetch_triangle_indices(&vertex_items);
-
-    for vertex_item in vertex_items {
-        vertices.push(vertex_item.vertex);
-    }
+    let vertices = vertex_items.fetch_vertices();
+    let triangle_indices = vertex_items.fetch_triangle_indices();
 
     let mesh = TriangleMesh { vertices, triangle_indices };
     mesh.write_ply_to_file("shader_test.ply").expect("Could not write PLY file!");
-
-
-
 
     log::info!("Done.")
 }

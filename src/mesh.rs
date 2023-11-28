@@ -132,40 +132,34 @@ impl TriangleMesh {
         triangles
     }
 
-    pub fn write_stl_to_file(&self, filename: &str) -> std::io::Result<()> {
+    pub fn write_stl_to_file(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
         use std::fs::File;
 
-        let mut f = std::io::BufWriter::new(File::create(filename).unwrap());
+        let mut f = std::io::BufWriter::new(File::create(path)?);
         let mut stl_writer = STLWriter::new(&mut f);
 
         let triangles = self.fetch_triangles();
 
-        for triangle in triangles {
-            stl_writer.write_triangle(&triangle)?;
+        for triangle in &triangles {
+            stl_writer.write_triangle(triangle)?;
         }
 
         Ok(())
     }
 
-    pub fn write_ply_to_file(&self, filename: &str) -> std::io::Result<()> {
+    pub fn write_ply_to_file(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
         use std::fs::File;
         // Write vertices and faces to PLY
-        let mut ply_f = std::io::BufWriter::new(File::create(filename).unwrap());
-        let mut ply_writer = PLYWriter::new(&mut ply_f).unwrap();
+        let mut ply_f = std::io::BufWriter::new(File::create(path)?);
+        let mut ply_writer = PLYWriter::new(&mut ply_f)?;
 
-        ply_writer.header_element_vertex3d(self.vertices.len()).unwrap();
-        ply_writer.header_element_face(self.triangle_indices.len()).unwrap();
-        ply_writer.header_end().unwrap();
+        ply_writer.header_element_vertex3d(self.vertices.len())?;
+        ply_writer.header_element_face(self.triangle_indices.len())?;
+        ply_writer.header_end()?;
     
         ply_writer.vertices(&self.vertices)?;
-        ply_writer.tri_faces(&self.triangle_indices)?;
-
-        Ok(())
+        ply_writer.tri_faces(&self.triangle_indices)
     }
-
-
-
-
 }
 
 
