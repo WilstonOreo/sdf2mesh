@@ -1,11 +1,7 @@
-use std::io::Write;
 extern crate sdf2mesh;
 
 use encase::ShaderType;
-use sdf2mesh::{
-    mesh::{TriangleMesh, VertexList},
-    Bounds3D, Vec3D,
-};
+use sdf2mesh::*;
 
 use clap::Parser;
 
@@ -116,7 +112,7 @@ impl Default for AppState {
 
 struct Rgba32FloatTextureStorage {
     data: Vec<f32>,
-    dims: (usize, usize),
+    dims: (u32, u32),
     texture: wgpu::Texture,
     view: wgpu::TextureView,
     buffer: wgpu::Buffer,
@@ -124,12 +120,12 @@ struct Rgba32FloatTextureStorage {
 }
 
 impl Rgba32FloatTextureStorage {
-    fn new(device: &wgpu::Device, dims: (usize, usize), binding_id: u32) -> Self {
+    fn new(device: &wgpu::Device, dims: (u32, u32), binding_id: u32) -> Self {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
             size: wgpu::Extent3d {
-                width: dims.0 as u32,
-                height: dims.1 as u32,
+                width: dims.0,
+                height: dims.1,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -140,7 +136,7 @@ impl Rgba32FloatTextureStorage {
             view_formats: &[],
         });
 
-        let data = vec![0.0_f32; dims.0 * dims.1 * 4];
+        let data = vec![0.0_f32; (dims.0 as usize) * (dims.1 as usize) * 4];
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: None,
@@ -160,7 +156,7 @@ impl Rgba32FloatTextureStorage {
     }
 
     fn get_rgba(&self, x: u32, y: u32) -> (f32, f32, f32, f32) {
-        let idx = ((y * (self.dims.0 as u32) + x) * 4) as usize;
+        let idx = ((y * self.dims.0 + x) * 4) as usize;
         (
             self.data[idx],
             self.data[idx + 1],
@@ -202,13 +198,13 @@ impl Rgba32FloatTextureStorage {
                 layout: wgpu::ImageDataLayout {
                     offset: 0,
                     // This needs to be padded to 256.
-                    bytes_per_row: Some((self.dims.0 * 16) as u32),
-                    rows_per_image: Some(self.dims.1 as u32),
+                    bytes_per_row: Some(self.dims.0 * 16),
+                    rows_per_image: Some(self.dims.1),
                 },
             },
             wgpu::Extent3d {
-                width: self.dims.0 as u32,
-                height: self.dims.1 as u32,
+                width: self.dims.0,
+                height: self.dims.1,
                 depth_or_array_layers: 1,
             },
         );
@@ -229,48 +225,18 @@ impl Rgba32FloatTextureStorage {
     }
 }
 
-trait ToPngImage {
-    fn to_png_image(&self, path: impl AsRef<std::path::Path>);
-}
-
-impl ToPngImage for Rgba32FloatTextureStorage {
-    fn to_png_image(&self, path: impl AsRef<std::path::Path>) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let image_data = self
-                .data
-                .iter()
-                .map(|f| (*f * 127.0 + 128.0).clamp(0.0, 255.0) as u8)
-                .collect();
-            output_image_native(image_data, self.dims, path);
-        }
-        #[cfg(target_arch = "wasm32")]
-        output_image_wasm(self.data.to_vec(), self.dims);
+impl png::ToPngFile for Rgba32FloatTextureStorage {
+    fn to_png_file(&self, path: impl AsRef<std::path::Path>) {
+        let image_data = self
+            .data
+            .iter()
+            .map(|f| (*f * 127.0 + 128.0).clamp(0.0, 255.0) as u8)
+            .collect();
+        png::image_data_to_file(image_data, self.dims, path);
     }
 }
 
-/// Replaces the site body with a message telling the user to open the console and use that.
-pub fn output_image_native(
-    image_data: Vec<u8>,
-    texture_dims: (usize, usize),
-    path: impl AsRef<std::path::Path>,
-) {
-    let mut png_data = Vec::<u8>::with_capacity(image_data.len());
-    let mut encoder = png::Encoder::new(
-        std::io::Cursor::new(&mut png_data),
-        texture_dims.0 as u32,
-        texture_dims.1 as u32,
-    );
-    encoder.set_color(png::ColorType::Rgba);
-    let mut png_writer = encoder.write_header().unwrap();
-    png_writer.write_image_data(&image_data[..]).unwrap();
-    png_writer.finish().unwrap();
-    log::info!("PNG file encoded in memory.");
 
-    let mut file = std::fs::File::create(&path).unwrap();
-    file.write_all(&png_data[..]).unwrap();
-    log::info!("PNG file written to disc as \"{:?}\".", &path.as_ref());
-}
 
 async fn run(_path: Option<String>) {
     let mut state = AppState::default();
@@ -298,9 +264,9 @@ async fn run(_path: Option<String>) {
     });
 
     let mut normal_texture =
-        Rgba32FloatTextureStorage::new(&device, (state.dims.x as usize, state.dims.y as usize), 1);
+        Rgba32FloatTextureStorage::new(&device, (state.dims.x, state.dims.y), 1);
     let mut position_texture =
-        Rgba32FloatTextureStorage::new(&device, (state.dims.x as usize, state.dims.y as usize), 2);
+        Rgba32FloatTextureStorage::new(&device, (state.dims.x, state.dims.y), 2);
 
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: None,
@@ -358,7 +324,7 @@ async fn run(_path: Option<String>) {
 
     log::info!("Wgpu context set up.");
 
-    let mut vertex_items = VertexList::default();
+    let mut vertex_items = mesh::VertexList::default();
 
     //----------------------------------------
     for z_slice_idx in 0..state.dims.z {
@@ -392,8 +358,6 @@ async fn run(_path: Option<String>) {
 
         for y in 0..state.dims.y {
             for x in 0..state.dims.x {
-                use sdf2mesh::Vertex;
-
                 let p = position_texture.get_rgba(x, y);
 
                 if p.3 > 0.0 {
@@ -418,7 +382,7 @@ async fn run(_path: Option<String>) {
     }
     log::info!("Have {} vertices.", vertex_items.len());
 
-    TriangleMesh::from(vertex_items)
+    mesh::TriangleMesh::from(vertex_items)
         .write_ply_to_file("shader_test.ply")
         .expect("Could not write PLY file!");
 

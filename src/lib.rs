@@ -182,7 +182,6 @@ impl Triangle<Vertex> {
 }
 
 #[derive(Clone, Default)]
-
 pub struct Quad<T: Copy>(pub T, pub T, pub T, pub T);
 
 impl<T: Copy> Quad<T> {
@@ -203,3 +202,5 @@ impl<T: Copy> Quad<T> {
 }
 
 pub mod mesh;
+pub mod png;
+pub mod texture;
