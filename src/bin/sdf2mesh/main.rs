@@ -235,6 +235,9 @@ async fn run(args: Arguments) {
 
     log::info!("Wgpu context set up.");
 
+
+    log::info!("Rendering SDF {}...", {args.sdf});
+
     let mut vertex_items = mesh::VertexList::default();
 
     //----------------------------------------
