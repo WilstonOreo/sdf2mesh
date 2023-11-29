@@ -139,8 +139,8 @@ impl<'a> PLYWriter<'a> {
 
 #[derive(Default)]
 pub struct TriangleMesh {
-    pub vertices: Vec<Vertex>,                // TODO remove pub
-    pub triangle_indices: Vec<Triangle<u32>>, // TODO remove pub
+    vertices: Vec<Vertex>,
+    triangle_indices: Vec<Triangle<u32>>,
 }
 
 impl TriangleMesh {
