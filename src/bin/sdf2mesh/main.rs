@@ -119,7 +119,10 @@ impl From<&Arguments> for AppState {
         let mut res = args.resolution.unwrap_or(256);
         if res.count_ones() > 1 {
             res = 2 << res.ilog2();
-            log::warn!("Resolution should be a power of 2 (actual resolution : {})", res);
+            log::warn!(
+                "Resolution should be a power of 2 (actual resolution : {})",
+                res
+            );
         }
 
         let bounds = Bounds3D::cube(args.bounds.unwrap_or(2.0), &Vec3D::zero());
@@ -173,7 +176,7 @@ async fn run(args: Arguments) {
     sdf3d_file.add_to_source(include_str!("shader.wgsl"));
 
     let shader = sdf3d_file.create_shader_module(&device);
-    
+
     let mut normal_texture =
         texture::Rgba32FloatTextureStorage::new(&device, (state.dims.x, state.dims.y), 1);
     let mut position_texture =
@@ -235,10 +238,10 @@ async fn run(args: Arguments) {
 
     log::info!("Wgpu context set up.");
 
-
     log::info!("Rendering SDF {}...", &args.sdf);
 
-    let mut vertex_items = mesh::VertexList::with_capacity(state.dims.x as usize * state.dims.y as usize);
+    let mut vertex_items =
+        mesh::VertexList::with_capacity(state.dims.x as usize * state.dims.y as usize);
 
     //----------------------------------------
     for z_slice_idx in 0..state.dims.z {
@@ -302,9 +305,7 @@ async fn run(args: Arguments) {
     }
     log::info!("Mesh as {} vertices.", vertex_items.len());
 
-    if let Err(err) = mesh::TriangleMesh::from(vertex_items)
-        .write_to_file(&args.mesh)
-    {
+    if let Err(err) = mesh::TriangleMesh::from(vertex_items).write_to_file(&args.mesh) {
         log::error!("Could not write mesh to {}!", err);
     }
 
