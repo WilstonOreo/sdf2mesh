@@ -1,9 +1,3 @@
-//sdf3d Example:
-//fn sdf3d(p: vec3<f32>) -> f32 {
-//    return sdf3d_torus(p, vec2(0.5, 0.2));
-//}
-
-
 /// Bounds
 struct Bounds3D {
     min: vec3f,
@@ -23,9 +17,9 @@ struct Cell {
 }
 
 fn cell_bounds(bounds: Bounds3D, res: vec3<u32>, pos: vec3<i32>) -> Bounds3D {
-    var v = vec3(f32(res.x - 1u), f32(res.y - 1u), f32(res.z - 1u));
-    var size = bounds_size(bounds) / v;    
-    var min = bounds.min + vec3(size.x * f32(pos.x), size.y * f32(pos.y), size.z * f32(pos.z));
+    let v = vec3(f32(res.x - 1u), f32(res.y - 1u), f32(res.z - 1u));
+    let size = bounds_size(bounds) / v;    
+    let min = bounds.min + vec3(size.x * f32(pos.x), size.y * f32(pos.y), size.z * f32(pos.z));
     return Bounds3D(min, min + size);
 }
 
@@ -62,7 +56,7 @@ fn cell_sign_changes(cell: Cell) -> vec4<bool> {
 }
 
 fn cell_sign_changes_f32(cell: Cell) -> f32 {
-    var signs = cell_sign_changes(cell);
+    let signs = cell_sign_changes(cell);
     var v = 0.0;
     if signs.x { v += 1.0; }
     if signs.y { v += 2.0; }
@@ -87,14 +81,14 @@ fn _cell_change(a: f32, b: f32, x: f32, y: f32, z: f32) -> vec3f {
 
 /// Returns interpolated position from cell
 fn cell_fetch_interpolated_pos(c: Cell) -> vec4f {        
-    var c000 = cell_get000(c);
-    var c100 = cell_get100(c);
-    var c010 = cell_get010(c);
-    var c110 = cell_get110(c);
-    var c001 = cell_get001(c);
-    var c101 = cell_get101(c);
-    var c011 = cell_get011(c);
-    var c111 = cell_get111(c);
+    let c000 = cell_get000(c);
+    let c100 = cell_get100(c);
+    let c010 = cell_get010(c);
+    let c110 = cell_get110(c);
+    let c001 = cell_get001(c);
+    let c101 = cell_get101(c);
+    let c011 = cell_get011(c);
+    let c111 = cell_get111(c);
 
     var changes = array<vec3f, 12>();
 
@@ -163,16 +157,16 @@ fn state_bounds() -> Bounds3D {
 
 @compute
 @workgroup_size(1)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-    var pos = vec3(i32(id.x), i32(id.y), i32(app_state.dims.w));
-    var bounds = cell_bounds(state_bounds(), grid_resolution(), pos);
-    var cell = cell_new(bounds, pos);
+fn main(@builtin(global_invocation_id) id: vec3u) {
+    let pos = vec3(i32(id.x), i32(id.y), i32(app_state.dims.w));
+    let bounds = cell_bounds(state_bounds(), grid_resolution(), pos);
+    let cell = cell_new(bounds, pos);
 
-    var p = cell_fetch_interpolated_pos(cell);
+    let p = cell_fetch_interpolated_pos(cell);
     if p.w >= 0.0 { // We have a vertex
-        var eps = app_state.bb_max.w;
-        var n = normalize(sdf3d_normal(p.xyz, eps));
-        var signs = cell_sign_changes_f32(cell);
+        let eps = app_state.bb_max.w;
+        let n = normalize(sdf3d_normal(p.xyz, eps));
+        let signs = cell_sign_changes_f32(cell);
 
         textureStore(tex_vertex_normals, pos.xy, vec4(n.xyz, signs));
         textureStore(tex_vertex_positions, pos.xy, p);
