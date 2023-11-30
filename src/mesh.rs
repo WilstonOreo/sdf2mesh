@@ -177,9 +177,9 @@ impl TriangleMesh {
     }
 
     pub fn write_to_file(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
-        match path.as_ref().extension().unwrap_or_default().to_str().unwrap_or_default() {
-            "stl" => self.write_stl_to_file(path)?,
-            "ply" => self.write_ply_to_file(path)?,
+        match path.as_ref().extension().unwrap_or_default().to_ascii_uppercase().to_str().unwrap_or_default() {
+            "STL" => self.write_stl_to_file(path)?,
+            "PLY" => self.write_ply_to_file(path)?,
             ext => log::error!("Unknown file extension: {ext}")
         }
         Ok(())
