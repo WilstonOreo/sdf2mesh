@@ -211,6 +211,10 @@ impl VertexListItem {
 pub struct VertexList(Vec<VertexListItem>);
 
 impl VertexList {
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self(Vec::with_capacity(capacity))
+    }
+
     pub fn insert(
         &mut self,
         cell: (u16, u16, u16),

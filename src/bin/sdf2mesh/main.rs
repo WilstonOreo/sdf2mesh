@@ -238,7 +238,7 @@ async fn run(args: Arguments) {
 
     log::info!("Rendering SDF {}...", &args.sdf);
 
-    let mut vertex_items = mesh::VertexList::default();
+    let mut vertex_items = mesh::VertexList::with_capacity(state.dims.x as usize * state.dims.y as usize);
 
     //----------------------------------------
     for z_slice_idx in 0..state.dims.z {
@@ -292,6 +292,10 @@ async fn run(args: Arguments) {
         if let Some(path) = &args.debug_png {
             normal_texture.to_png_file(format!("{path}{z_slice_idx:04}_normal.png"));
             position_texture.to_png_file(format!("{path}{z_slice_idx:04}_position.png"));
+        }
+
+        if z_slice_idx % 128 == 0 {
+            log::info!("Slice #{}", z_slice_idx);
         }
 
         queue.submit(Some(command_encoder.finish()));
