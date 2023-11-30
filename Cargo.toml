@@ -8,10 +8,12 @@ edition = "2021"
 [dependencies]
 bytemuck = "1.14.0"
 clap = { version = "4.1", features = ["derive","cargo"] }
+common_macros = "0.1.1"
 encase = "0.6"
 env_logger = "0.10"
 euclid = "0.22.9"
 futures-intrusive = "0.5"
+lazy_static = "1.4.0"
 log = "0.4"
 nalgebra = "0.32.3"
 png = "0.17.10"
