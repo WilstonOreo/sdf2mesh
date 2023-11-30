@@ -1,13 +1,14 @@
 fn sdf3d_box(p: vec3f, b: vec3f) -> f32
 {
-  vec3f q = abs(p) - b;
-  return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+  let q = abs(p) - b;
+  return length(max(q,vec3f()) + min(max(q.x,max(q.y,q.z)),0.0));
 }
 
 fn sdf3d_capsule(p: vec3f, a: vec3f, b: vec3f, r: f32) -> f32
 {
-  vec3f pa = p - a, ba = b - a;
-  float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+  let pa = p - a;
+  let ba = b - a;
+  let h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0);
   return length( pa - ba*h ) - r;
 }
 

@@ -22,15 +22,15 @@ struct Cell {
     pos: vec3<i32>,
 }
 
-fn sdf3d_cell_bounds(bounds: Bounds3D, res: vec3<u32>, pos: vec3<i32>) -> Bounds3D {
+fn cell_bounds(bounds: Bounds3D, res: vec3<u32>, pos: vec3<i32>) -> Bounds3D {
     var v = vec3(f32(res.x - 1u), f32(res.y - 1u), f32(res.z - 1u));
     var size = bounds_size(bounds) / v;    
     var min = bounds.min + vec3(size.x * f32(pos.x), size.y * f32(pos.y), size.z * f32(pos.z));
     return Bounds3D(min, min + size);
 }
 
-fn sdf3d_cell_new(b: Bounds3D) -> Cell {
-    return sdf3d_Cell(
+fn cell_new(b: Bounds3D, pos: vec3i) -> Cell {
+    return Cell(
         array(  
             sdf3d(vec3(b.min.x, b.min.y, b.min.z)),
             sdf3d(vec3(b.max.x, b.min.y, b.min.z)),
@@ -82,7 +82,7 @@ fn _cell_change(a: f32, b: f32, x: f32, y: f32, z: f32) -> vec3f {
     if a > 0.0 != b > 0.0 {
         return vec3(x,y,z);
     }
-    return 0.0;
+    return vec3f();
 }
 
 /// Returns interpolated position from cell
@@ -165,14 +165,14 @@ fn state_bounds() -> Bounds3D {
 @workgroup_size(1)
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     var pos = vec3(i32(id.x), i32(id.y), i32(app_state.dims.w));
-    var bounds = sdf3d_cell_bounds(state_bounds(), grid_resolution(), pos);
-    var cell = sdf3d_cell_new(bounds, pos);
+    var bounds = cell_bounds(state_bounds(), grid_resolution(), pos);
+    var cell = cell_new(bounds, pos);
 
-    var p = sdf3d_cell_fetch_interpolated_pos(cell);
+    var p = cell_fetch_interpolated_pos(cell);
     if p.w >= 0.0 { // We have a vertex
         var eps = app_state.bb_max.w;
-        var n = normalize(normal(p.xyz, eps));
-        var signs = sdf3d_cell_sign_changes_f32(cell);
+        var n = normalize(sdf3d_normal(p.xyz, eps));
+        var signs = cell_sign_changes_f32(cell);
 
         textureStore(tex_vertex_normals, pos.xy, vec4(n.xyz, signs));
         textureStore(tex_vertex_positions, pos.xy, p);
