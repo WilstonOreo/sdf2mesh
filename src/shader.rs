@@ -87,16 +87,17 @@ impl SDF3DShader {
                         if trimmed.starts_with("use") {
                             let modulename = trimmed
                                 .replacen("use", "", 1)
-                                .replace('\"', "")
+                                .replace(['\"', ';'], "")
                                 .trim()
                                 .to_string();
+                            log::info!("{modulename}");
                             if self.modules.contains_key(&modulename) {
                                 self.modules.get(&modulename).unwrap()(w)?;
                             }
                             continue;
                         } else if trimmed.starts_with("include") {
                             let filename = std::path::PathBuf::from(
-                                trimmed.replacen("include", "", 1).replace('\"', "").trim(),
+                                trimmed.replacen("include", "", 1).replace(['\"', ';'], "").trim(),
                             );
                             if filename != path.as_ref() {
                                 self.shader_source_input(filename, w)?;

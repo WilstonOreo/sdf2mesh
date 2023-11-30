@@ -169,11 +169,11 @@ async fn run(args: Arguments) {
         .await
         .unwrap();
 
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: None,
-        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!("shader.wgsl"))),
-    });
+    let mut sdf3d_file = shader::SDF3DShader::new(&args.sdf);
+    sdf3d_file.add_to_source(include_str!("shader.wgsl"));
 
+    let shader = sdf3d_file.create_shader_module(&device);
+    
     let mut normal_texture =
         texture::Rgba32FloatTextureStorage::new(&device, (state.dims.x, state.dims.y), 1);
     let mut position_texture =
@@ -236,7 +236,7 @@ async fn run(args: Arguments) {
     log::info!("Wgpu context set up.");
 
 
-    log::info!("Rendering SDF {}...", {args.sdf});
+    log::info!("Rendering SDF {}...", &args.sdf);
 
     let mut vertex_items = mesh::VertexList::default();
 
