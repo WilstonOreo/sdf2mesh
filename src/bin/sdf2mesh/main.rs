@@ -1,3 +1,6 @@
+// Copyright © Michael Winkelmann <michael@winkelmann.site>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 extern crate sdf2mesh;
 
 use encase::ShaderType;

@@ -1,3 +1,6 @@
+// Copyright © Michael Winkelmann <michael@winkelmann.site>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 pub type Scalar = f32;
 pub type Vec2D = euclid::Vector2D<Scalar, euclid::UnknownUnit>;
 pub type Vec3D = euclid::Vector3D<Scalar, euclid::UnknownUnit>;

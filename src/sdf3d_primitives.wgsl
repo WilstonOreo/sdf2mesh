@@ -1,3 +1,6 @@
+// Copyright © Michael Winkelmann <michael@winkelmann.site>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // Builtin SDF3D primitives
 // mostly translated from https://iquilezles.org/articles/distfunctions/ 
 

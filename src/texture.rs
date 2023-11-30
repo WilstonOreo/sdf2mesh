@@ -1,3 +1,5 @@
+// Copyright © Michael Winkelmann <michael@winkelmann.site>
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use crate::png;
 
 pub struct Rgba32FloatTextureStorage {
@@ -125,4 +127,3 @@ impl png::ToPngFile for Rgba32FloatTextureStorage {
         png::image_data_to_file(image_data, self.dims, path);
     }
 }
-

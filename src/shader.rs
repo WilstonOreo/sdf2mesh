@@ -1,3 +1,6 @@
+// Copyright © Michael Winkelmann <michael@winkelmann.site>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use common_macros::hash_map;
 use lazy_static::lazy_static;
 use std::collections::HashMap;

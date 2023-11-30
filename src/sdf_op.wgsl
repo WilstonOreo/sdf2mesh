@@ -1,3 +1,8 @@
+// Copyright © Michael Winkelmann <michael@winkelmann.site>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+// SDF smooth operations.
+// translated from https://iquilezles.org/articles/distfunctions/ 
 
 fn sdf_op_smooth_union(d1: f32, d2: f32, k: f32) -> f32
 {

@@ -1,3 +1,6 @@
+// Copyright © Michael Winkelmann <michael@winkelmann.site>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// Bounds
 struct Bounds3D {
     min: vec3f,

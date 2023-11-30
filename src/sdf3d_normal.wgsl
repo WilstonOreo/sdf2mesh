@@ -1,3 +1,6 @@
+// Copyright © Michael Winkelmann <michael@winkelmann.site>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 fn sdf3d_normal(p: vec3<f32>, eps: f32) -> vec3<f32> {
     let v1 = vec3( 1.0,-1.0,-1.0);
     let v2 = vec3(-1.0,-1.0, 1.0);
