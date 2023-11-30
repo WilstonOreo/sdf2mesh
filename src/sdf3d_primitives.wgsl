@@ -1,7 +1,7 @@
 fn sdf3d_box(p: vec3f, b: vec3f) -> f32
 {
   let q = abs(p) - b;
-  return length(max(q,vec3f()) + min(max(q.x,max(q.y,q.z)),0.0));
+  return length(max(q,vec3f(0.0, 0.0, 0.0))) + min(max(q.x,max(q.y,q.z)),0.0);
 }
 
 fn sdf3d_capsule(p: vec3f, a: vec3f, b: vec3f, r: f32) -> f32
