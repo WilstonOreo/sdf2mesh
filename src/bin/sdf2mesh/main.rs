@@ -97,11 +97,11 @@ struct Arguments {
     #[arg(short = 'i', long)]
     sdf: String,
 
-    /// Recipient TOML file (optional)
-    #[arg(short = 'o', long)]
+    /// Output mesh file (supports STL and PLY output)
+    #[arg(short = '0', long)]
     mesh: String,
 
-    /// Optional latex output file
+    /// Write PNG images for debugging
     #[arg(long)]
     debug_png: Option<String>,
 
@@ -302,9 +302,11 @@ async fn run(args: Arguments) {
     }
     log::info!("Mesh as {} vertices.", vertex_items.len());
 
-    mesh::TriangleMesh::from(vertex_items)
-        .write_ply_to_file(&args.mesh)
-        .expect("Could not write PLY file!");
+    if let Err(err) = mesh::TriangleMesh::from(vertex_items)
+        .write_to_file(&args.mesh)
+    {
+        log::error!("Could not write mesh to {}!", err);
+    }
 
     log::info!("Mesh written to {}", args.mesh)
 }
