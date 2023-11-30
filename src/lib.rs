@@ -203,4 +203,5 @@ impl<T: Copy> Quad<T> {
 
 pub mod mesh;
 pub mod png;
+pub mod shader;
 pub mod texture;
