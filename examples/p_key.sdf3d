@@ -1,0 +1,52 @@
+use sdf3d::*;
+use sdf::op;
+
+const KEY_SIZE = 15.0;
+const KEY_ELEVATION = 2.0;
+const PLATE_HEIGHT = 1.5;
+const LETTER_THICKNESS = 1.0;
+
+fn letter_p_arc(p: vec3f, ra: f32, rb: f32) -> f32
+{
+    var pp = p.yxz;
+    pp.x = abs(pp.x - KEY_SIZE*0.2);
+    pp.y += KEY_SIZE*0.25;
+    let h = vec3(0.0, KEY_SIZE*0.15, 0.0);
+    let q = pp - clamp( pp, -h, h );
+    let sc = vec2(1.0, 0.0);
+
+    var k = 0.0;
+    if (0.0 > sc.x*q.y) {
+        k = dot(q.xy,sc);
+    } else {
+        k = length(q.xy);
+    }
+
+    return sqrt(dot(q,q) + ra*ra - 2.0*ra*k) - rb;
+}
+
+fn segment(p: vec3f, a: vec3f, b: vec3f) -> f32 {
+    return sdf3d_capsule(p, a, b, LETTER_THICKNESS);
+}
+
+fn letter_p(p: vec3f) -> f32 {
+    var q = p;
+    q.y *= -1.0;
+    q.x -= KEY_SIZE*0.15;
+    return min(
+        letter_p_arc(q.xzy, KEY_SIZE*0.3, LETTER_THICKNESS),
+        segment(q, vec3(-KEY_SIZE*0.4, 0.0, KEY_SIZE*0.5), vec3(-KEY_SIZE*0.4, 0.0, -KEY_SIZE*0.5))
+    );
+}
+
+fn sdf3d(p: vec3f) -> f32 {
+    return sdf_op_smooth_subtraction(
+        letter_p(p.xzy * 2.5 - vec3(0.0, KEY_ELEVATION * 2.5 + LETTER_THICKNESS, 0.0)),
+        sdf_op_smooth_union(
+            sdf3d_box(p, vec3(KEY_SIZE, KEY_SIZE, PLATE_HEIGHT)),
+            sdf3d_cylinder(p.yzx - vec3(0.0, (KEY_ELEVATION + PLATE_HEIGHT) * 0.5, 0.0), KEY_ELEVATION - PLATE_HEIGHT, KEY_SIZE * 0.35),
+            KEY_SIZE * 0.15
+        ),
+        0.0
+    );
+}
