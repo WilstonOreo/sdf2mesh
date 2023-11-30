@@ -1,0 +1,122 @@
+use sdf3d::*;
+use sdf::op;
+
+const CUBE_WIDTH = 1.0;
+const LETTER_THICKNESS = 0.12;
+const SMOOTHNESS = 0.02;
+
+const C = CUBE_WIDTH;
+
+fn letter_r_arc(p: vec3f, ra: f32, rb: f32) -> f32
+{
+    var pp = p.yxz;
+    pp.x = abs(pp.x - C*0.2);
+    pp.y += C*0.25;
+    let h = vec3(0.0, C*0.15, 0.0);
+    let q = pp - clamp( pp, -h, h );
+    let sc = vec2(1.0, 0.0);
+
+    var k = 0.0;
+    if (0.0 > sc.x*q.y) {
+        k = dot(q.xy,sc);
+    } else {
+        k = length(q.xy);
+    }
+
+    return sqrt(dot(q,q) + ra*ra - 2.0*ra*k) - rb;
+}
+
+
+fn segment(p: vec3f, a: vec3f, b: vec3f) -> f32 {
+    return sdf3d_capsule(p, a, b, LETTER_THICKNESS);
+}
+
+// Letter M Z+
+fn letter_m(p: vec3f) -> f32 {
+    var q = p.yxz;
+    q.y *= -1.0;
+    return min(
+        min(
+            segment(q, vec3(-C*0.45, -C*0.5, C), vec3(-C*0.45, C*0.5, C)),
+            segment(q, vec3(-C*0.45, -C*0.5, C), vec3(0.0, 0.0, C))
+        ),
+        min(
+            segment(q, vec3(0.0, 0.0, C), vec3(C*0.45, -C*0.5, C)),
+            segment(q, vec3(C*0.45, -C*0.5, C), vec3(C*0.45, C*0.5, C))
+        )
+    );
+}
+
+// Letter A Z-
+fn letter_a(p: vec3f) -> f32 {
+    var q = p.zyx;
+    q = vec3(-q.yx, q.z);
+
+    return min(
+        min(
+            segment(q, vec3(0.0, -C*0.5, -C), vec3(-C*0.4, C*0.5, -C)),
+            segment(q, vec3(0.0, -C*0.5, -C), vec3( C*0.4, C*0.5, -C))
+        ),
+        segment(q, vec3(-C*0.2, C*0.1, -C), vec3(C*0.2, C*0.1, -C))
+    );
+}
+
+// Letter R Y+
+fn letter_r(p: vec3f) -> f32 {
+    var q = p;
+    q.y *= -1.0;
+    q.x -= C*0.15;
+    return min(
+        letter_r_arc(q.xzy - vec3(0.0, 0.0, C), C*0.3, LETTER_THICKNESS),
+        min(
+            segment(q, vec3(-C*0.4, C, C*0.5), vec3(-C*0.4, C, -C*0.5)),
+            segment(q, vec3(-C*0.15, C, -C*0.1), vec3( C*0.15, C, -C*0.5))
+        )
+    );
+}
+
+
+// Letter T X+
+fn letter_t(p: vec3f) -> f32 {
+    return min(
+        segment(p, vec3(C, 0.0, C*0.5), vec3(C, 0.0, -C*0.5)),
+        segment(p, vec3(C, -C*0.4, C*0.5), vec3(C, C*0.4, C*0.5))
+    );
+}
+
+
+// Letter I Z-
+fn letter_i(p: vec3f) -> f32 {
+    var q = p.yxz;
+    q.x *= -1.0;
+    return segment(q, vec3(-C, 0.0, C*0.5), vec3(-C, 0.0, -C*0.5));
+}
+
+
+// Letter N Y-
+fn letter_n(p: vec3f) -> f32 {
+    var q = p.xzy;
+//    q.x *= -1.0;
+
+    return min(
+        segment(q, vec3(-C*0.4, -C, C*0.5), vec3(-C*0.4, -C, -C*0.5)),
+        min(
+            segment(q, vec3( C*0.4, -C, C*0.5), vec3( C*0.4, -C, -C*0.5)),
+            segment(q, vec3( -C*0.4, -C, -C*0.5), vec3( C*0.4, -C, C*0.5))
+        )
+    );
+}
+
+fn sdf3d(p: vec3f) -> f32 {
+    let cube = sdf_op_smooth_intersection(
+        sdf3d_box(p, vec3(CUBE_WIDTH, CUBE_WIDTH, CUBE_WIDTH)), 
+        sdf3d_sphere(p, CUBE_WIDTH * 1.40),
+        SMOOTHNESS);
+    let letter = min(
+        min(letter_m(p), letter_a(p)), 
+        min(min(letter_r(p), letter_t(p)), 
+            min(letter_i(p), letter_n(p)))
+    );
+        
+    return sdf_op_smooth_subtraction(letter, cube, SMOOTHNESS);
+}
