@@ -27,7 +27,6 @@ pub fn read_lines<P: AsRef<std::path::Path>>(filename: P) -> Result<Lines<BufRea
 type ModuleHandlers = HashMap<String, Box<dyn Fn(&mut dyn Write) -> std::io::Result<()>>>;
 
 pub struct SDF3DShader {
-    path: std::path::PathBuf,
     source: String,
     modules: ModuleHandlers,
 }
@@ -35,7 +34,6 @@ pub struct SDF3DShader {
 impl SDF3DShader {
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Self {
         let mut s = Self {
-            path: std::path::PathBuf::from(path.as_ref()),
             source: String::new(),
             modules: HashMap::new(),
         };
