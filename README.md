@@ -56,7 +56,7 @@ In order to save memory, this process is done slice by slice instead rendering t
 If we run the app with
 
 ```shell
- cargo run sdf2mesh -- --sdf examples/torus.sdf3d  --resolution 128 --mesh torus.stl
+ cargo run -- --sdf examples/torus.sdf3d  --resolution 128 --mesh torus.stl
 ```
 
 we get the following output:
