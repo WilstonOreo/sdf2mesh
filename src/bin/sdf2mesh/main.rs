@@ -165,8 +165,8 @@ async fn run(args: Arguments) {
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                features: wgpu::Features::empty(),
-                limits: wgpu::Limits::downlevel_defaults(),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::downlevel_defaults(),
             },
             None,
         )
@@ -236,6 +236,7 @@ async fn run(args: Arguments) {
         layout: Some(&pipeline_layout),
         module: &shader,
         entry_point: "main",
+        compilation_options: Default::default(),
     });
 
     log::info!("Wgpu context set up.");
