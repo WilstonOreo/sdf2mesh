@@ -59,10 +59,11 @@ impl SDF3DShader {
         s
     }
 
-    pub fn path(&self) -> &std::path::PathBuf {
-        &self.path
-    }
-
+    /*     pub fn from_shadertoy_api(shader_id: &str) -> Self {
+            let mut s = Self {
+            }
+        }
+    */
     pub fn add_module(
         &mut self,
         name: &str,
@@ -100,7 +101,10 @@ impl SDF3DShader {
                             continue;
                         } else if trimmed.starts_with("include") {
                             let filename = std::path::PathBuf::from(
-                                trimmed.replacen("include", "", 1).replace(['\"', ';'], "").trim(),
+                                trimmed
+                                    .replacen("include", "", 1)
+                                    .replace(['\"', ';'], "")
+                                    .trim(),
                             );
                             if filename != path.as_ref() {
                                 self.shader_source_input(filename, w)?;

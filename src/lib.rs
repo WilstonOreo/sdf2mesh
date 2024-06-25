@@ -208,3 +208,6 @@ pub mod mesh;
 pub mod png;
 pub mod shader;
 pub mod texture;
+
+#[cfg(feature = "shadertoy")]
+pub mod shadertoy;

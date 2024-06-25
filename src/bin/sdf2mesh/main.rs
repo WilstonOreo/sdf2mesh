@@ -98,6 +98,9 @@ struct Arguments {
     #[arg(short = 'i', long)]
     sdf: Option<String>,
 
+    #[arg(short, long)]
+    shadertoy: Option<String>,
+
     /// Output mesh file (supports STL and PLY output)
     #[arg(short = '0', long)]
     mesh: String,
@@ -241,7 +244,11 @@ async fn run(args: Arguments) {
 
     log::info!("Wgpu context set up.");
 
-    log::info!("Rendering SDF {}...", &args.sdf);
+    if let Some(sdf) = &args.sdf {
+        log::info!("Reading SDF from {}...", sdf);
+    } else if let Some(shadertoy) = &args.shadertoy {
+        log::info!("Reading SDF from ShaderToy (shader ID {})", { shadertoy });
+    }
 
     let mut vertex_items =
         mesh::VertexList::with_capacity(state.dims.x as usize * state.dims.y as usize);
