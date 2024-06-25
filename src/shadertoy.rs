@@ -121,14 +121,14 @@ impl Shader {
 		layout(binding=0) uniform float     iTime;                 // shader playback time (in seconds)
 		layout(binding=0) uniform float     iTimeDelta;            // render time (in seconds)
 		layout(binding=0) uniform int       iFrame;                // shader playback frame
-		layout(binding=0) uniform vec4      iChannelTime;       // channel playback time (in seconds)
+		layout(binding=0) uniform vec4      iChannelTime;          // channel playback time (in seconds)
 		layout(binding=0) uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
 		layout(binding=0) uniform vec4      iDate;                 // (year, month, day, time in seconds)
 		layout(binding=0) uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
         "#
     }
 
-    pub fn generate_wgsl(&self) -> Result<String, ShaderProcessingError> {
+    pub fn generate_wgsl_code(&self) -> Result<String, ShaderProcessingError> {
         let mut glsl = String::from("#version 450 core\n");
 
         glsl += Shader::default_uniform_block();
@@ -136,11 +136,27 @@ impl Shader {
         let shader_code = &self.fetch_code_from_last_pass().unwrap();
         glsl += shader_code;
 
-        convert_glsl_to_wgsl(&glsl)
+        let mut wgsl = convert_glsl_to_wgsl(&glsl)?;
+
+        // Remove unused functions
+        wgsl = remove_function_from_wgsl(&wgsl, "fn main_1()")?;
+        wgsl = remove_function_from_wgsl(&wgsl, "@fragment")?;
+        wgsl = remove_function_from_wgsl(&wgsl, "fn mainImage(")?;
+
+        let normal_fn_name = "normal";
+
+        if wgsl_has_function(&wgsl, normal_fn_name)? {
+            wgsl = rename_function_in_wgsl(&wgsl, normal_fn_name, "sdf3d_normal")?;
+        } else {
+        }
+
+        let wgstl = rename_function_in_wgsl(&wgsl, "normal", "sdf3d_normal")?;
+
+        Ok(wgsl)
     }
 }
 
-fn convert_glsl_to_wgsl(glsl: &str) -> Result<String, ShaderProcessingError> {
+pub fn convert_glsl_to_wgsl(glsl: &str) -> Result<String, ShaderProcessingError> {
     use naga::back::wgsl::WriterFlags;
     use naga::front::glsl::{Frontend, Options};
     use naga::ShaderStage;
@@ -149,7 +165,7 @@ fn convert_glsl_to_wgsl(glsl: &str) -> Result<String, ShaderProcessingError> {
     let mut frontend = Frontend::default();
     let options = Options::from(ShaderStage::Fragment);
 
-    let mut module = frontend.parse(&options, glsl)?;
+    let module = frontend.parse(&options, glsl)?;
 
     // Write to WGSL
     let mut wgsl = String::new();
@@ -167,11 +183,146 @@ fn convert_glsl_to_wgsl(glsl: &str) -> Result<String, ShaderProcessingError> {
     Ok(wgsl)
 }
 
+pub fn remove_function_from_wgsl(
+    wgsl: &str,
+    function_name: &str,
+) -> Result<String, ShaderProcessingError> {
+    // find function name in wgsl
+    let lines = wgsl.lines();
+    let mut new_wgsl = String::new();
+    let mut in_function = false;
+    let mut function_found = false;
+    for line in lines {
+        let line = line.trim();
+        if line.starts_with(function_name) {
+            in_function = true;
+            function_found = true;
+        }
+
+        if in_function {
+            if line.starts_with('}') {
+                in_function = false;
+            }
+        } else {
+            new_wgsl += format!("{}\n", line).as_str();
+        }
+    }
+    if !function_found {
+        return Err(ShaderProcessingError::ShaderError(format!(
+            "Function {} not found in shader",
+            function_name
+        )));
+    }
+
+    Ok(new_wgsl)
+}
+
+pub fn wgsl_has_function(wgsl: &str, function_name: &str) -> Result<bool, ShaderProcessingError> {
+    let lines = wgsl.lines();
+    let mut new_wgsl = String::new();
+    let mut in_function = false;
+    let mut function_found = false;
+    for line in lines {
+        let line = line.trim();
+        if line.starts_with(function_name) {
+            function_found = true;
+            break;
+        }
+    }
+
+    if !function_found {
+        return Err(ShaderProcessingError::ShaderError(format!(
+            "Function {} not found in shader",
+            function_name
+        )));
+    }
+
+    Ok(true)
+}
+
+fn rename_function_in_wgsl(
+    wgsl: &str,
+    old_function_name: &str,
+    new_function_name: &str,
+) -> Result<String, ShaderProcessingError> {
+    // find function name in wgsl
+    let lines = wgsl.lines();
+    let mut new_wgsl = String::new();
+    let mut in_function = false;
+    let mut function_found = false;
+    for line in lines {
+        let line = line.trim();
+        if line.starts_with(format!("{old_function_name}(").as_str()) {
+            in_function = true;
+            function_found = true;
+            new_wgsl += line
+                .replacen(old_function_name, new_function_name, 1)
+                .as_str();
+            format!("{}\n", new_function_name).as_str();
+        } else {
+            new_wgsl += format!("{}\n", line).as_str();
+        }
+
+        if in_function && line.starts_with('}') {
+            in_function = false;
+        }
+    }
+
+    if !function_found {
+        return Err(ShaderProcessingError::ShaderError(format!(
+            "Function `{}` not found in shader",
+            old_function_name
+        )));
+    }
+
+    Ok(new_wgsl)
+}
+
 #[cfg(test)]
 mod tests {
-    use naga::back::wgsl::WriterFlags;
-
     use super::*;
+    #[test]
+    fn remove_function() {
+        let wgsl = r#"        
+fn mainImage(fragColor: ptr<function, vec4<f32>>, fragCoord: vec2<f32>) {
+    var fragCoord_1: vec2<f32>;
+
+    fragCoord_1 = fragCoord;
+    return;
+}
+
+fn main_1() {
+    return;
+}
+
+@fragment
+fn main() {
+    main_1();
+    return;
+}
+"#;
+
+        let new_wgsl = remove_function_from_wgsl(wgsl, "fn main_1()").unwrap();
+
+        assert!(new_wgsl.contains("fn mainImage(fragColor"));
+        assert!(!new_wgsl.contains("fn main_1()"));
+
+        let new_wgsl = remove_function_from_wgsl(&new_wgsl, "@fragment").unwrap();
+        assert!(new_wgsl.contains("fn mainImage(fragColor"));
+
+        assert!(!new_wgsl.contains("fn main()"));
+
+        let new_wgsl = remove_function_from_wgsl(&new_wgsl, "fn mainImage(").unwrap();
+
+        assert!(new_wgsl.trim().is_empty());
+    }
+
+    fn rename_function() {
+        let in_wgsl = r#"fn normal(p_4: vec3<f32>, epsilon: f32) -> vec3<f32>"#;
+        let out_wgsl = rename_function_in_wgsl(in_wgsl, "normal", "sdf3d_normal").unwrap();
+
+        assert!(out_wgsl.contains("fn sdf3d_normal(p_4: vec3<f32>, epsilon: f32) -> vec3<f32>"));
+    }
 
     #[test]
     fn test_naga() {
