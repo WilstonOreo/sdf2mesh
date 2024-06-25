@@ -33,7 +33,7 @@ pub struct SDF3DShader {
 }
 
 impl SDF3DShader {
-    pub fn new(path: impl AsRef<std::path::Path>) -> Self {
+    pub fn from_path(path: impl AsRef<std::path::Path>) -> Self {
         let mut s = Self {
             path: std::path::PathBuf::from(path.as_ref()),
             source: String::new(),

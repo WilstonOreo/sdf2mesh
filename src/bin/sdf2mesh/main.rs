@@ -98,7 +98,7 @@ impl Default for AppState {
 struct Arguments {
     /// Input SDF file
     #[arg(short = 'i', long)]
-    sdf: String,
+    sdf: Option<String>,
 
     /// Output mesh file (supports STL and PLY output)
     #[arg(short = '0', long)]
@@ -175,7 +175,8 @@ async fn run(args: Arguments) {
         .await
         .unwrap();
 
-    let mut sdf3d_file = shader::SDF3DShader::new(&args.sdf);
+    let mut sdf3d_file = shader::SDF3DShader::from_path(args.sdf.as_ref().unwrap());
+
     sdf3d_file.add_to_source(include_str!("shader.wgsl"));
 
     let shader = sdf3d_file.create_shader_module(&device);
