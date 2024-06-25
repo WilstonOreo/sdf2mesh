@@ -178,7 +178,7 @@ async fn run(args: Arguments) {
 
     let mut sdf3d_file = shader::SDF3DShader::from_path(args.sdf.as_ref().unwrap());
 
-    sdf3d_file.add_to_source(include_str!("shader.wgsl"));
+    sdf3d_file.add_to_source(include_str!("dualcontour.wgsl"));
 
     let shader = sdf3d_file.create_shader_module(&device);
 
