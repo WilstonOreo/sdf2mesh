@@ -58,9 +58,7 @@ impl AppState {
     }
 
     fn set_z(&mut self, z_slice_idx: u32) {
-        let z_size = self.bb_max.z - self.bb_min.z;
         self.dims.z_slice_idx = z_slice_idx;
-        self.bb_min.w = (z_slice_idx as f32) / (self.dims.z as f32) * z_size + self.bb_min.z;
     }
 }
 
@@ -75,7 +73,7 @@ impl Default for AppState {
                 x: min.x,
                 y: min.y,
                 z: min.z,
-                /* z */ w: 0.0,
+                /* unused */ w: 0.0,
             },
             bb_max: Vec4 {
                 x: max.x,
