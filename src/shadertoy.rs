@@ -161,12 +161,10 @@ vec3 sdf3d_normal(in vec3 p, in float epsilon)
 }
 
 "#;
-        glsl += r#"
-        layout (location = 0) out vec4 TDColor;
-		void main()
-		{
-		}
-        "#;
+        // We simply add an empty main function to the shader
+        // Because the shader can only be parsed if it has a main function
+        // The actual main function is added later via dualcontour.wgsl shader
+        glsl += r#" void main() {}"#;
 
         let mut frontend = Frontend::default();
         let options = Options::from(ShaderStage::Fragment);
