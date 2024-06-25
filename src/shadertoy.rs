@@ -55,6 +55,9 @@ struct Shader {
 enum ShaderProcessingError {
     RequestError(reqwest::Error),
     ShaderError(String),
+    ParseError(naga::front::glsl::ParseError),
+    WgslError(naga::back::wgsl::Error),
+    ValidationError(naga::WithSpan<naga::valid::ValidationError>),
 }
 
 impl From<reqwest::Error> for ShaderProcessingError {
@@ -66,6 +69,24 @@ impl From<reqwest::Error> for ShaderProcessingError {
 impl From<String> for ShaderProcessingError {
     fn from(error: String) -> Self {
         ShaderProcessingError::ShaderError(error)
+    }
+}
+
+impl From<naga::front::glsl::ParseError> for ShaderProcessingError {
+    fn from(error: naga::front::glsl::ParseError) -> Self {
+        ShaderProcessingError::ParseError(error)
+    }
+}
+
+impl From<naga::back::wgsl::Error> for ShaderProcessingError {
+    fn from(error: naga::back::wgsl::Error) -> Self {
+        ShaderProcessingError::WgslError(error)
+    }
+}
+
+impl From<naga::WithSpan<naga::valid::ValidationError>> for ShaderProcessingError {
+    fn from(error: naga::WithSpan<naga::valid::ValidationError>) -> Self {
+        ShaderProcessingError::ValidationError(error)
     }
 }
 
@@ -100,38 +121,68 @@ impl Shader {
 		layout(binding=0) uniform float     iTime;                 // shader playback time (in seconds)
 		layout(binding=0) uniform float     iTimeDelta;            // render time (in seconds)
 		layout(binding=0) uniform int       iFrame;                // shader playback frame
-		//layout(binding=0) uniform float     iChannelTime[4];       // channel playback time (in seconds)
+		layout(binding=0) uniform vec4      iChannelTime;       // channel playback time (in seconds)
 		layout(binding=0) uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
 		layout(binding=0) uniform vec4      iDate;                 // (year, month, day, time in seconds)
 		layout(binding=0) uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
         "#
     }
+
+    pub fn generate_wgsl(&self) -> Result<String, ShaderProcessingError> {
+        let mut glsl = String::from("#version 450 core\n");
+
+        glsl += Shader::default_uniform_block();
+
+        let shader_code = &self.fetch_code_from_last_pass().unwrap();
+        glsl += shader_code;
+
+        convert_glsl_to_wgsl(&glsl)
+    }
+}
+
+fn convert_glsl_to_wgsl(glsl: &str) -> Result<String, ShaderProcessingError> {
+    use naga::back::wgsl::WriterFlags;
+    use naga::front::glsl::{Frontend, Options};
+    use naga::ShaderStage;
+
+    // Setup and parse GLSL fragment shader
+    let mut frontend = Frontend::default();
+    let options = Options::from(ShaderStage::Fragment);
+
+    let mut module = frontend.parse(&options, glsl)?;
+
+    // Write to WGSL
+    let mut wgsl = String::new();
+    let mut wgsl_writer = naga::back::wgsl::Writer::new(&mut wgsl, WriterFlags::empty());
+
+    use naga::valid::Validator;
+    let module_info = Validator::new(
+        naga::valid::ValidationFlags::all(),
+        naga::valid::Capabilities::all(),
+    )
+    .validate(&module)?;
+
+    wgsl_writer.write(&module, &module_info)?;
+
+    Ok(wgsl)
 }
 
 #[cfg(test)]
 mod tests {
     use naga::back::wgsl::WriterFlags;
-    use pollster::FutureExt;
 
     use super::*;
 
     #[test]
     fn test_naga() {
-        use naga::front::glsl::{Frontend, Options};
-        use naga::ShaderStage;
-
         let mut glsl = String::from("#version 450 core\n");
 
         glsl += Shader::default_uniform_block();
+
+        // Our test shader
         glsl += r#"
-const int MAX_STEP = 32;
-const float MAX_DISTANCE = 1000.f;
-float current_ray_length = 0.f;
-vec3 c = vec3(0, 0, 0);
+vec3 c = vec3(0.0, 0.0, 0.0);
 const float r = 1.0;
-const float MIN_DISTANCE = 0.01;
-
-
 float distance_from_sphere(vec3 p, vec3 c, float r)
 {
     return distance(p, c) - r;
@@ -160,30 +211,16 @@ vec3 sdf3d_normal(in vec3 p, in float epsilon)
     return normalize(normal);
 }
 
+void mainImage( out vec4 fragColor, in vec2 fragCoord ) {}
+
 "#;
         // We simply add an empty main function to the shader
         // Because the shader can only be parsed if it has a main function
         // The actual main function is added later via dualcontour.wgsl shader
         glsl += r#" void main() {}"#;
 
-        let mut frontend = Frontend::default();
-        let options = Options::from(ShaderStage::Fragment);
+        let wgsl = convert_glsl_to_wgsl(&glsl).unwrap();
 
-        let module = frontend.parse(&options, &glsl).unwrap();
-
-        let mut out_string = String::new();
-        let mut wgsl_writer = naga::back::wgsl::Writer::new(&mut out_string, WriterFlags::empty());
-
-        use naga::valid::Validator;
-        let module_info = Validator::new(
-            naga::valid::ValidationFlags::all(),
-            naga::valid::Capabilities::all(),
-        )
-        .validate(&module)
-        .unwrap();
-
-        wgsl_writer.write(&module, &module_info).unwrap();
-
-        println!("{}", out_string);
+        println!("{}", wgsl);
     }
 }
