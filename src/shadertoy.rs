@@ -217,6 +217,7 @@ impl WgslShaderCode {
         for line in self.0.lines() {
             if line.trim() != line_to_be_removed.trim() {
                 s += line;
+                s += "\n";
             }
         }
         self.0 = s;
@@ -246,13 +247,13 @@ fn remove_function_from_wgsl(
     function_name: &str,
 ) -> Result<String, ShaderProcessingError> {
     // find function name in wgsl
-    let mut lines = wgsl.lines();
+    let lines = wgsl.lines();
     let mut new_wgsl = String::new();
     let mut in_function = false;
     let mut function_found = false;
     let mut curly_braces = 0;
 
-    while let Some(line) = lines.next() {
+    for line in lines {
         let line = line.trim();
         if line.starts_with(function_name) {
             in_function = true;
