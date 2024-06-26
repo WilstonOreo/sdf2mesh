@@ -107,6 +107,14 @@ struct Arguments {
     #[arg(long, default_value = "sdf")]
     shadertoy_sdf: Option<String>,
 
+    /// Input GLSL fragment shader
+    #[arg(long)]
+    glsl: Option<String>,
+
+    /// GLSL SDF name
+    #[arg(long, default_value = "sdf")]
+    glsl_sdf: Option<String>,
+
     /// Output mesh file (supports STL and PLY output)
     #[arg(short = '0', long)]
     mesh: String,
@@ -202,6 +210,13 @@ async fn run(args: Arguments) {
         log::info!("Reading SDF from {}...", sdf);
 
         sdf3d_file = shader::Sdf3DShader::from_path(sdf);
+    } else if let Some(glsl) = &args.glsl {
+        log::info!("Reading SDF from GLSL fragment shader {}...", glsl);
+        sdf3d_file = shader::Sdf3DShader::from_glsl_fragment_shader(
+            glsl,
+            args.glsl_sdf.unwrap_or("sdf".into()).as_str(),
+        )
+        .unwrap();
     }
 
     if let Some(debug_wgsl) = &args.debug_wgsl {

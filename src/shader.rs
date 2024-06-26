@@ -5,7 +5,7 @@ use common_macros::hash_map;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Lines, Write};
+use std::io::{BufRead, BufReader, Lines, Read, Write};
 
 use crate::shadertoy;
 
@@ -62,15 +62,43 @@ impl Sdf3DShader {
         s
     }
 
+    pub fn from_glsl_fragment_shader(
+        path: impl AsRef<std::path::Path>,
+        sdf: &str,
+    ) -> Result<Self, shadertoy::ShaderProcessingError> {
+        use shadertoy::*;
+        let mut file = File::open(path).unwrap();
+
+        let mut glsl = String::new();
+        file.read_to_string(&mut glsl).unwrap();
+
+        let mut wgsl = WgslShaderCode::from_glsl(&glsl)?;
+        wgsl.remove_function("fn main_1(")?;
+        wgsl.remove_function("fn main(")?;
+        wgsl.remove_line("@fragment"); // Remove fragment entry point
+        wgsl.add_line(include_str!("sdf3d_normal.wgsl"));
+
+        if wgsl.has_function(sdf) {
+            if !wgsl.has_function("sdf3d") {
+                // Generate function wrapper
+                wgsl.add_line(
+                    format!("fn sdf3d(p: vec3<f32>) -> f32 {{ return {}(p); }}", sdf).as_str(),
+                );
+            }
+        } else {
+            return Err(shadertoy::ShaderProcessingError::MissingSdf(sdf.into()));
+        }
+
+        Ok(Self {
+            source: wgsl.to_string(),
+            modules: HashMap::new(),
+        })
+    }
+
     pub async fn from_shadertoy_api(
         shader_id: &str,
         sdf: &str,
     ) -> Result<Self, shadertoy::ShaderProcessingError> {
-        let mut s = Self {
-            source: String::new(),
-            modules: HashMap::new(),
-        };
-
         let shader = shadertoy::Shader::from_api(shader_id).await?;
         log::info!("Shader: {}", shader.info.name);
         log::info!("Shader author: {}", shader.info.username);
@@ -96,9 +124,11 @@ impl Sdf3DShader {
 
         // Add function to compute the normal
         wgsl.add_line(include_str!("sdf3d_normal.wgsl"));
-        s.source = wgsl.to_string();
 
-        Ok(s)
+        Ok(Self {
+            source: wgsl.to_string(),
+            modules: HashMap::new(),
+        })
     }
 
     pub fn add_module(

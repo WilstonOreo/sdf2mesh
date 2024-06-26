@@ -158,9 +158,11 @@ impl Shader {
 
         let shader_code = &self.fetch_code_from_last_pass().unwrap();
         glsl += shader_code;
-        glsl += r#" void main() {}"#; // We simply add an empty main function to the shader
 
-        convert_glsl_to_wgsl(&glsl).map(WgslShaderCode)
+        // We add an empty main function to the shader so that naga can compile it to valid WGSL
+        glsl += r#" void main() {}"#;
+
+        WgslShaderCode::from_glsl(&glsl)
     }
 }
 
@@ -194,6 +196,10 @@ pub fn convert_glsl_to_wgsl(glsl: &str) -> Result<String, ShaderProcessingError>
 pub struct WgslShaderCode(String);
 
 impl WgslShaderCode {
+    pub fn from_glsl(glsl: &str) -> Result<Self, ShaderProcessingError> {
+        convert_glsl_to_wgsl(glsl).map(Self)
+    }
+
     pub fn remove_function(&mut self, function_name: &str) -> Result<(), ShaderProcessingError> {
         self.0 = remove_function_from_wgsl(&self.0, function_name)?;
         Ok(())
