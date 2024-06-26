@@ -7,6 +7,7 @@ use encase::ShaderType;
 use sdf2mesh::{png::ToPngFile, *};
 
 use clap::Parser;
+use shader::Sdf3DShader;
 
 #[derive(Debug, ShaderType, Clone, Copy)]
 struct Vec4 {
@@ -98,12 +99,25 @@ struct Arguments {
     #[arg(short = 'i', long)]
     sdf: Option<String>,
 
-    #[arg(short, long)]
+    /// Input ShaderToy shader ID
+    #[arg(long)]
     shadertoy: Option<String>,
+
+    /// ShaderToy SDF name
+    #[arg(long, default_value = "sdf")]
+    shadertoy_sdf: Option<String>,
+
+    /// ShaderToy SDF normal function name
+    #[arg(long, default_value = "normal")]
+    shadertoy_sdf_normal: Option<String>,
 
     /// Output mesh file (supports STL and PLY output)
     #[arg(short = '0', long)]
     mesh: String,
+
+    /// Output WGSL file for debugging
+    #[arg(long)]
+    debug_wgsl: Option<String>,
 
     /// Write PNG images for debugging
     #[arg(long)]
@@ -114,7 +128,7 @@ struct Arguments {
     resolution: Option<u32>,
 
     /// Size of bounding box. Default: 2
-    #[arg(short = 'b')]
+    #[arg(short = 'b', long)]
     bounds: Option<f32>,
 }
 
@@ -176,7 +190,25 @@ async fn run(args: Arguments) {
         .await
         .unwrap();
 
-    let mut sdf3d_file = shader::SDF3DShader::from_path(args.sdf.as_ref().unwrap());
+    let mut sdf3d_file = Sdf3DShader::default();
+
+    if let Some(shadertoy) = &args.shadertoy {
+        sdf3d_file = shader::Sdf3DShader::from_shadertoy_api(
+            shadertoy,
+            args.shadertoy_sdf.unwrap_or("sdf".into()).as_str(),
+            args.shadertoy_sdf_normal
+                .unwrap_or("normal".into())
+                .as_str(),
+        )
+        .await
+        .unwrap();
+    } else if let Some(sdf) = &args.sdf {
+        sdf3d_file = shader::Sdf3DShader::from_path(sdf);
+    }
+
+    if let Some(debug_wgsl) = &args.debug_wgsl {
+        sdf3d_file.write_to_file(debug_wgsl).unwrap();
+    }
 
     sdf3d_file.add_to_source(include_str!("dualcontour.wgsl"));
 
@@ -313,7 +345,7 @@ async fn run(args: Arguments) {
 
         queue.submit(Some(command_encoder.finish()));
     }
-    log::info!("Mesh as {} vertices.", vertex_items.len());
+    log::info!("Mesh has {} vertices.", vertex_items.len());
 
     if let Err(err) = mesh::TriangleMesh::from(vertex_items).write_to_file(&args.mesh) {
         log::error!("Could not write mesh to {}!", err);
@@ -322,7 +354,8 @@ async fn run(args: Arguments) {
     log::info!("Mesh written to {}", args.mesh)
 }
 
-pub fn main() {
+#[tokio::main]
+async fn main() {
     let args = Arguments::parse();
 
     env_logger::builder()

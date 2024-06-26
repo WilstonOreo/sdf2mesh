@@ -30,12 +30,13 @@ pub fn read_lines<P: AsRef<std::path::Path>>(
 
 type ModuleHandlers = HashMap<String, Box<dyn Fn(&mut dyn Write) -> std::io::Result<()>>>;
 
-pub struct SDF3DShader {
+#[derive(Default)]
+pub struct Sdf3DShader {
     source: String,
     modules: ModuleHandlers,
 }
 
-impl SDF3DShader {
+impl Sdf3DShader {
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Self {
         let mut s = Self {
             source: String::new(),
@@ -63,6 +64,8 @@ impl SDF3DShader {
 
     pub async fn from_shadertoy_api(
         shader_id: &str,
+        sdf: &str,
+        sdf_normal_function: &str,
     ) -> Result<Self, shadertoy::ShaderProcessingError> {
         let mut s = Self {
             source: String::new(),
@@ -76,19 +79,27 @@ impl SDF3DShader {
         wgsl.remove_function("@fragment")?; // Remove main function
         wgsl.remove_function("fn mainImage(")?;
 
-        if wgsl.has_function("normal")? {
-            wgsl.rename_function("normal", "sdf3d_normal")?;
+        if wgsl.has_function(sdf) {
+            if !wgsl.has_function("sdf3d") {
+                wgsl.add_line(
+                    format!("fn sdf3d(p: vec3<f32>) -> f32 {{ return {}(p); }}", sdf).as_str(),
+                );
+            }
+        } else {
+            return Err(shadertoy::ShaderProcessingError::MissingSdf(sdf.into()));
+        }
+
+        if wgsl.has_function(sdf_normal_function) {
+            if !wgsl.has_function("sdf3d_normal") {
+                wgsl.add_line(
+                "fn sdf3d_normal(p: vec3<f32>, eps: f32) -> vec3<f32> { return normal(p, eps); }",
+            );
+            }
         } else {
             wgsl.add_line("use sdf3d::normal;");
             s.add_module("sdf3d::normal", |w| {
                 write!(w, "{}", BUILTIN_MODULES["sdf3d::normal"])
             });
-        }
-
-        if wgsl.has_function("map")? {
-            wgsl.rename_function("map", "sdf3d")?;
-        } else {
-            return Err(shadertoy::ShaderProcessingError::MissingSdf("map".into()));
         }
 
         s.source = wgsl.to_string();
@@ -148,11 +159,16 @@ impl SDF3DShader {
                 }
             }
             Err(err) => {
-                eprintln!("Could not include {:?}: {}", path.as_ref(), err);
+                log::error!("Could not include {:?}: {}", path.as_ref(), err);
             }
         }
 
         Ok(())
+    }
+
+    pub fn write_to_file(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
+        let mut f = std::io::BufWriter::new(File::create(path)?);
+        write!(f, "{}", self.source)
     }
 
     pub fn shader_source(&self, path: impl AsRef<std::path::Path>) -> String {

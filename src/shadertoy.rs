@@ -2,7 +2,7 @@ static API_KEY: &str = "rdnjhn";
 
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[allow(unused)]
 pub struct ShaderInfo {
     id: String,
@@ -21,24 +21,45 @@ pub struct ShaderInfo {
     hasliked: i32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
+#[allow(unused)]
+pub struct Sampler {
+    filter: String,
+    wrap: String,
+    vflip: String,
+    srgb: String,
+    internal: String,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[allow(unused)]
+pub struct ShaderInput {
+    id: i32,
+    src: String,
+    ctype: String,
+    channel: i32,
+    sampler: Sampler,
+    published: i32,
+}
+
+#[derive(Debug, Deserialize, Default)]
 #[allow(unused)]
 pub struct ShaderOutput {
     id: i32,
     channel: i32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[allow(unused)]
 pub struct RenderPass {
-    inputs: Vec<i32>,
+    inputs: Vec<ShaderInput>,
     outputs: Vec<ShaderOutput>,
     code: String,
     name: String,
     description: String,
     r#type: String,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[allow(unused)]
 pub struct Shader {
     ver: String,
@@ -133,6 +154,7 @@ impl Shader {
 
         let shader_code = &self.fetch_code_from_last_pass().unwrap();
         glsl += shader_code;
+        glsl += r#" void main() {}"#; // We simply add an empty main function to the shader
 
         convert_glsl_to_wgsl(&glsl).map(WgslShaderCode)
     }
@@ -173,8 +195,8 @@ impl WgslShaderCode {
         Ok(())
     }
 
-    pub fn has_function(&self, function_name: &str) -> Result<bool, ShaderProcessingError> {
-        wgsl_has_function(&self.0, function_name)
+    pub fn has_function(&self, function_name: &str) -> bool {
+        wgsl_has_function(&self.0, function_name).unwrap_or(false)
     }
 
     pub fn rename_function(
@@ -203,11 +225,11 @@ fn remove_function_from_wgsl(
     function_name: &str,
 ) -> Result<String, ShaderProcessingError> {
     // find function name in wgsl
-    let lines = wgsl.lines();
+    let mut lines = wgsl.lines();
     let mut new_wgsl = String::new();
     let mut in_function = false;
     let mut function_found = false;
-    for line in lines {
+    while let Some(line) = lines.next() {
         let line = line.trim();
         if line.starts_with(function_name) {
             in_function = true;
@@ -215,8 +237,9 @@ fn remove_function_from_wgsl(
         }
 
         if in_function {
-            if line.starts_with('}') {
+            if line.starts_with("return;") {
                 in_function = false;
+                lines.next();
             }
         } else {
             new_wgsl += format!("{}\n", line).as_str();
@@ -237,7 +260,7 @@ fn wgsl_has_function(wgsl: &str, function_name: &str) -> Result<bool, ShaderProc
     let mut function_found = false;
     for line in lines {
         let line = line.trim();
-        if line.starts_with(function_name) {
+        if line.starts_with(format!("fn {function_name}(").as_str()) {
             function_found = true;
             break;
         }
