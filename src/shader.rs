@@ -75,9 +75,13 @@ impl Sdf3DShader {
         let shader = shadertoy::Shader::from_api(shader_id).await?;
         let mut wgsl = shader.generate_wgsl_shader_code()?;
 
-        wgsl.remove_function("fn main_1")?;
-        wgsl.remove_function("@fragment")?; // Remove main function
+        wgsl.remove_function("fn main_1(")?;
+        wgsl.write_to_file("test_no_main_1.wgsl").unwrap();
+        wgsl.remove_function("fn main(")?; // Remove main function
+        wgsl.write_to_file("test_no_main.wgsl").unwrap();
         wgsl.remove_function("fn mainImage(")?;
+        wgsl.write_to_file("test_no_mainImage.wgsl").unwrap();
+        wgsl.remove_line("@fragment"); // Remove @fragment
 
         if wgsl.has_function(sdf) {
             if !wgsl.has_function("sdf3d") {

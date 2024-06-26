@@ -117,7 +117,11 @@ pub enum ShaderToyApiResponse {
 
 impl Shader {
     pub fn fetch_code_from_last_pass(&self) -> Option<String> {
-        self.renderpass.last().map(|last| last.code.clone())
+        let mut code = String::new();
+        for pass in &self.renderpass {
+            code += &pass.code;
+        }
+        Some(code)
     }
 
     pub async fn from_api(shader_id: &str) -> Result<Self, ShaderProcessingError> {
@@ -143,7 +147,7 @@ impl Shader {
 		layout(binding=0) uniform vec4      iChannelTime;          // channel playback time (in seconds)
 		layout(binding=0) uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
 		layout(binding=0) uniform vec4      iDate;                 // (year, month, day, time in seconds)
-		layout(binding=0) uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
+		layout(binding=0) uniform float     iSampleRate;           // sound sample rate (i.e., 44100)        
         "#
     }
 
@@ -208,9 +212,26 @@ impl WgslShaderCode {
         Ok(())
     }
 
+    pub fn remove_line(&mut self, line_to_be_removed: &str) {
+        let mut s = String::new();
+        for line in self.0.lines() {
+            if line.trim() != line_to_be_removed.trim() {
+                s += line;
+            }
+        }
+        self.0 = s;
+    }
+
     pub fn add_line(&mut self, line: &str) {
         self.0 += line;
         self.0 += "\n";
+    }
+
+    pub fn write_to_file(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
+        let mut f = std::io::BufWriter::new(std::fs::File::create(path)?);
+        use std::io::Write;
+        f.write_all(self.0.as_bytes())?;
+        Ok(())
     }
 }
 
