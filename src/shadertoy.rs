@@ -3,6 +3,7 @@ static API_KEY: &str = "rdnjhn";
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+#[allow(unused)]
 pub struct ShaderInfo {
     id: String,
     date: String,
@@ -21,12 +22,14 @@ pub struct ShaderInfo {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(unused)]
 pub struct ShaderOutput {
     id: i32,
     channel: i32,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(unused)]
 pub struct RenderPass {
     inputs: Vec<i32>,
     outputs: Vec<ShaderOutput>,
@@ -36,6 +39,7 @@ pub struct RenderPass {
     r#type: String,
 }
 #[derive(Debug, Deserialize)]
+#[allow(unused)]
 pub struct Shader {
     ver: String,
     info: ShaderInfo,
@@ -130,23 +134,7 @@ impl Shader {
         let shader_code = &self.fetch_code_from_last_pass().unwrap();
         glsl += shader_code;
 
-        let mut wgsl = convert_glsl_to_wgsl(&glsl)?;
-
-        // Remove unused functions
-        wgsl = remove_function_from_wgsl(&wgsl, "fn main_1()")?;
-        wgsl = remove_function_from_wgsl(&wgsl, "@fragment")?;
-        wgsl = remove_function_from_wgsl(&wgsl, "fn mainImage(")?;
-
-        let normal_fn_name = "normal";
-
-        if wgsl_has_function(&wgsl, normal_fn_name)? {
-            wgsl = rename_function_in_wgsl(&wgsl, normal_fn_name, "sdf3d_normal")?;
-        } else {
-        }
-
-        let wgstl = rename_function_in_wgsl(&wgsl, "normal", "sdf3d_normal")?;
-
-        Ok(WgslShaderCode(wgsl))
+        convert_glsl_to_wgsl(&glsl).map(WgslShaderCode)
     }
 }
 
