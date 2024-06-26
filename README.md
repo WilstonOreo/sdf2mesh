@@ -15,7 +15,7 @@ The resulting STL file can be viewed in a mesh viewer, like [MeshLab](https://ww
  cargo run -- --sdf examples/torus.sdf3d  --resolution 128 --mesh torus.stl
 ```
 
-You can also genrate a mesh from ShaderToy:
+You can also generate a mesh from ShaderToy:
 
 ```shell
 cargo run --release -- --shadertoy-id DldfR7 --resolution 256 --mesh shadertoy.stl --bounds 5
@@ -84,8 +84,12 @@ The shader must have at least two functions:
 * `float sdf(vec3 p)`: This function calculates the SDF. In the example above, we can use the `--shadertoy-sdf` a different name, e.g. `map`. However, while the name of the function can be arbitrary, its signature must always be `float (vec3 p)`.
 * `vec3 normal(vec3 p, float eps)`: This function estimates the normal of the SDF. In the example above, we can use the `--shadertoy-sdf-normal` a different name, e.g. `estimateNormal`. While the name of the function can be arbitrary, its signature must always be `vec3 (vec3 p, float eps)`.
 
+The shader will be download via ShaderToy API and will be converted from GLSL to WGSL using [naga](https://github.com/gfx-rs/wgpu/tree/trunk/naga).
+
 Some more considerations:
 
+* Because the shader is compiled from GLSL to WGSL, compilation might fail in certain cases.
+* Buffers and Channels are not supported (yet).
 * Make sure you use a proper bounding box that fits the size of your SDF. The command line argument `--bounds 2` will create a centered bounding box with size `2`. This also means you SDF should be always centered.
 * Meshes grow *O(n^3)* with resolution. This means, a mesh generated with resolution of 2048 can be become several GBs in size!
 * The dual-contouring algorithm still has some problems with certain triangle constellations and precision. In this case, an invalid quad will be created and the mesh will have a hole. This happens more often with higher resolutions.
