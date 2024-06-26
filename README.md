@@ -76,8 +76,8 @@ We get the following output:
 
 ### Considerations when generating a mesh
 
-* Make sure you use a proper bounding box that fits the size of your SDF. The command line argument `--bounds 2` will create a centered bounding box with size `2`. This also means you SDF should be always centered.
-* Meshes grow *O(n^3)* with resolution. This means, a mesh generated with resolution of 2048 can become several GBs in size!
+* Make sure you use a proper bounding box that fits the size of your SDF. The command line argument `--bounds 2` will create a centered bounding box with size `2`. This also means your SDF should be always centered.
+* Meshes grow *O(n^3)* with resolution. This means the STL file of a mesh generated with a resolution of 2048 can be several GBs in size!
 * The dual-contouring algorithm still has some problems with certain triangle constellations and precision. In this case, an invalid quad will be created and the mesh will have a hole. This happens more often with higher resolutions.
 * Use post-processing to simplify and possibly fix your mesh.
 
@@ -112,4 +112,4 @@ Some more considerations:
 ## Known issues
 
 * When the SDF is out of bounds, mesh generation might fail
-* Crashes with resolutions above 2048 pixels
+* Crashes with resolutions above 2048
