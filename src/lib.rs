@@ -184,7 +184,7 @@ impl Triangle<Vertex> {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Quad<T: Copy>(pub T, pub T, pub T, pub T);
 
 impl<T: Copy> Quad<T> {
@@ -201,6 +201,12 @@ impl<T: Copy> Quad<T> {
             Triangle(self.2, self.1, self.0),
             Triangle(self.0, self.3, self.2),
         )
+    }
+}
+
+impl Quad<u32> {
+    pub fn is_valid(&self) -> bool {
+        self.0 != u32::MAX && self.1 != u32::MAX && self.2 != u32::MAX && self.3 != u32::MAX
     }
 }
 

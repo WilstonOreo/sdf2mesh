@@ -180,10 +180,17 @@ impl TriangleMesh {
     }
 
     pub fn write_to_file(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
-        match path.as_ref().extension().unwrap_or_default().to_ascii_uppercase().to_str().unwrap_or_default() {
+        match path
+            .as_ref()
+            .extension()
+            .unwrap_or_default()
+            .to_ascii_uppercase()
+            .to_str()
+            .unwrap_or_default()
+        {
             "STL" => self.write_stl_to_file(path)?,
             "PLY" => self.write_ply_to_file(path)?,
-            ext => log::error!("Unknown file extension: {ext}")
+            ext => log::error!("Unknown file extension: {ext}"),
         }
         Ok(())
     }
@@ -260,6 +267,16 @@ impl VertexList {
     pub fn fetch_triangle_indices(&self) -> Vec<Triangle<u32>> {
         let mut indices = Vec::with_capacity(self.0.len() * 2);
 
+        let push_triangles = |indices: &mut Vec<Triangle<u32>>, quad: Quad<u32>| {
+            if quad.is_valid() {
+                let tris = quad.make_triangles();
+                indices.push(tris.0);
+                indices.push(tris.1)
+            } else {
+                log::warn!("Invalid quad: {:?}. Mesh will not be water-tight!", quad);
+            }
+        };
+
         for vertex_item in &self.0 {
             let changes = vertex_item.sign_changes;
             let x = vertex_item.cell.0;
@@ -274,9 +291,8 @@ impl VertexList {
                     self.vertex_index(x, y - 1, z),
                 )
                 .swap(changes.0);
-                let tris = quad.make_triangles();
-                indices.push(tris.0);
-                indices.push(tris.1);
+
+                push_triangles(&mut indices, quad);
             }
 
             if changes.1 != changes.3 && x > 0 && z > 0 {
@@ -287,9 +303,8 @@ impl VertexList {
                     self.vertex_index(x - 1, y, z),
                 )
                 .swap(!changes.1);
-                let tris = quad.make_triangles();
-                indices.push(tris.0);
-                indices.push(tris.1);
+
+                push_triangles(&mut indices, quad);
             }
 
             if changes.2 != changes.3 && x > 0 && y > 0 {
@@ -300,19 +315,19 @@ impl VertexList {
                     self.vertex_index(x - 1, y, z),
                 )
                 .swap(changes.2);
-                let tris = quad.make_triangles();
-                indices.push(tris.0);
-                indices.push(tris.1);
+
+                push_triangles(&mut indices, quad);
             }
         }
 
         indices
     }
 
+    /// @brief Returns the index of the vertex at the given position or u32::MAX if not found
     fn vertex_index(&self, x: u16, y: u16, z: u16) -> u32 {
         self.0
             .binary_search_by_key(&VertexListItem::compute_index(x, y, z), |item| item.index())
-            .unwrap() as u32
+            .unwrap_or(u32::MAX as usize) as u32
     }
 }
 
