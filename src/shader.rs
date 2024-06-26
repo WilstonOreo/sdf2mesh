@@ -65,7 +65,6 @@ impl Sdf3DShader {
     pub async fn from_shadertoy_api(
         shader_id: &str,
         sdf: &str,
-        sdf_normal_function: &str,
     ) -> Result<Self, shadertoy::ShaderProcessingError> {
         let mut s = Self {
             source: String::new(),
@@ -95,20 +94,8 @@ impl Sdf3DShader {
             return Err(shadertoy::ShaderProcessingError::MissingSdf(sdf.into()));
         }
 
-        if wgsl.has_function(sdf_normal_function) {
-            if !wgsl.has_function("sdf3d_normal") {
-                // Generate function wrapper for normal function
-                wgsl.add_line(format!(
-                "fn sdf3d_normal(p: vec3<f32>, eps: f32) -> vec3<f32> {{ return {}(p, eps); }}", sdf_normal_function).as_str(),
-            );
-            }
-        } else {
-            wgsl.add_line("use sdf3d::normal;");
-            s.add_module("sdf3d::normal", |w| {
-                write!(w, "{}", BUILTIN_MODULES["sdf3d::normal"])
-            });
-        }
-
+        // Add function to compute the normal
+        wgsl.add_line(include_str!("sdf3d_normal.wgsl"));
         s.source = wgsl.to_string();
 
         Ok(s)

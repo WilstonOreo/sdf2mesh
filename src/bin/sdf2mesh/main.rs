@@ -107,10 +107,6 @@ struct Arguments {
     #[arg(long, default_value = "sdf")]
     shadertoy_sdf: Option<String>,
 
-    /// ShaderToy SDF normal function name
-    #[arg(long, default_value = "normal")]
-    shadertoy_sdf_normal: Option<String>,
-
     /// Output mesh file (supports STL and PLY output)
     #[arg(short = '0', long)]
     mesh: String,
@@ -199,9 +195,6 @@ async fn run(args: Arguments) {
         sdf3d_file = shader::Sdf3DShader::from_shadertoy_api(
             shadertoy_id,
             args.shadertoy_sdf.unwrap_or("sdf".into()).as_str(),
-            args.shadertoy_sdf_normal
-                .unwrap_or("normal".into())
-                .as_str(),
         )
         .await
         .unwrap();
