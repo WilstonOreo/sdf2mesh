@@ -5,12 +5,12 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize, Default)]
 #[allow(unused)]
 pub struct ShaderInfo {
-    id: String,
-    date: String,
+    pub id: String,
+    pub date: String,
     viewed: i32,
-    name: String,
-    username: String,
-    description: String,
+    pub name: String,
+    pub username: String,
+    pub description: String,
     likes: i32,
     published: i32,
     flags: i32,
@@ -62,9 +62,9 @@ pub struct RenderPass {
 #[derive(Debug, Deserialize, Default)]
 #[allow(unused)]
 pub struct Shader {
-    ver: String,
-    info: ShaderInfo,
-    renderpass: Vec<RenderPass>,
+    pub ver: String,
+    pub info: ShaderInfo,
+    pub renderpass: Vec<RenderPass>,
 }
 
 #[derive(Debug)]

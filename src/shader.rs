@@ -73,6 +73,9 @@ impl Sdf3DShader {
         };
 
         let shader = shadertoy::Shader::from_api(shader_id).await?;
+        log::info!("Shader: {}", shader.info.name);
+        log::info!("Shader author: {}", shader.info.username);
+
         let mut wgsl = shader.generate_wgsl_shader_code()?;
 
         wgsl.remove_function("fn main_1(")?;
