@@ -229,6 +229,8 @@ fn remove_function_from_wgsl(
     let mut new_wgsl = String::new();
     let mut in_function = false;
     let mut function_found = false;
+    let mut curly_braces = 0;
+
     while let Some(line) = lines.next() {
         let line = line.trim();
         if line.starts_with(function_name) {
@@ -237,14 +239,22 @@ fn remove_function_from_wgsl(
         }
 
         if in_function {
-            if line.starts_with("return;") {
-                in_function = false;
-                lines.next();
+            for c in line.chars() {
+                if c == '{' {
+                    curly_braces += 1;
+                } else if c == '}' {
+                    curly_braces -= 1;
+                }
             }
-        } else {
-            new_wgsl += format!("{}\n", line).as_str();
+        }
+        if curly_braces == 0 {
+            if !in_function {
+                new_wgsl += format!("{}\n", line).as_str();
+            }
+            in_function = false;
         }
     }
+
     if !function_found {
         return Err(ShaderProcessingError::ShaderError(format!(
             "Function {} not found in shader",
@@ -342,14 +352,15 @@ fn main() {
         assert!(new_wgsl.contains("fn mainImage(fragColor"));
         assert!(!new_wgsl.contains("fn main_1()"));
 
-        let new_wgsl = remove_function_from_wgsl(&new_wgsl, "@fragment").unwrap();
+        let new_wgsl = remove_function_from_wgsl(&new_wgsl, "fn main(").unwrap();
         assert!(new_wgsl.contains("fn mainImage(fragColor"));
+        println!("{}", new_wgsl);
 
         assert!(!new_wgsl.contains("fn main()"));
 
         let new_wgsl = remove_function_from_wgsl(&new_wgsl, "fn mainImage(").unwrap();
 
-        assert!(new_wgsl.trim().is_empty());
+        assert_eq!(new_wgsl.trim(), "@fragment");
     }
 
     #[test]
