@@ -128,7 +128,7 @@ impl Shader {
         "#
     }
 
-    pub fn generate_wgsl_code(&self) -> Result<String, ShaderProcessingError> {
+    pub fn generate_wgsl_shader_code(&self) -> Result<WgslShaderCode, ShaderProcessingError> {
         let mut glsl = String::from("#version 450 core\n");
 
         glsl += Shader::default_uniform_block();
@@ -152,7 +152,7 @@ impl Shader {
 
         let wgstl = rename_function_in_wgsl(&wgsl, "normal", "sdf3d_normal")?;
 
-        Ok(wgsl)
+        Ok(WgslShaderCode(wgsl))
     }
 }
 
@@ -183,7 +183,33 @@ pub fn convert_glsl_to_wgsl(glsl: &str) -> Result<String, ShaderProcessingError>
     Ok(wgsl)
 }
 
-pub fn remove_function_from_wgsl(
+pub struct WgslShaderCode(String);
+
+impl WgslShaderCode {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn remove_function(&mut self, function_name: &str) -> Result<(), ShaderProcessingError> {
+        self.0 = remove_function_from_wgsl(&self.0, function_name)?;
+        Ok(())
+    }
+
+    pub fn has_function(&self, function_name: &str) -> Result<bool, ShaderProcessingError> {
+        wgsl_has_function(&self.0, function_name)
+    }
+
+    pub fn rename_function(
+        &mut self,
+        old_function_name: &str,
+        new_function_name: &str,
+    ) -> Result<(), ShaderProcessingError> {
+        self.0 = rename_function_in_wgsl(&self.0, old_function_name, new_function_name)?;
+        Ok(())
+    }
+}
+
+fn remove_function_from_wgsl(
     wgsl: &str,
     function_name: &str,
 ) -> Result<String, ShaderProcessingError> {
@@ -217,7 +243,7 @@ pub fn remove_function_from_wgsl(
     Ok(new_wgsl)
 }
 
-pub fn wgsl_has_function(wgsl: &str, function_name: &str) -> Result<bool, ShaderProcessingError> {
+fn wgsl_has_function(wgsl: &str, function_name: &str) -> Result<bool, ShaderProcessingError> {
     let lines = wgsl.lines();
     let mut new_wgsl = String::new();
     let mut in_function = false;
