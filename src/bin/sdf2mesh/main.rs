@@ -101,7 +101,7 @@ struct Arguments {
 
     /// Input ShaderToy shader ID
     #[arg(long)]
-    shadertoy: Option<String>,
+    shadertoy_id: Option<String>,
 
     /// ShaderToy SDF name
     #[arg(long, default_value = "sdf")]
@@ -192,10 +192,12 @@ async fn run(args: Arguments) {
 
     let mut sdf3d_file = Sdf3DShader::default();
 
-    if let Some(shadertoy) = &args.shadertoy {
-        log::info!("Reading SDF from ShaderToy (shader ID {})", { shadertoy });
+    if let Some(shadertoy_id) = &args.shadertoy_id {
+        log::info!("Reading SDF from ShaderToy (shader ID {})", {
+            shadertoy_id
+        });
         sdf3d_file = shader::Sdf3DShader::from_shadertoy_api(
-            shadertoy,
+            shadertoy_id,
             args.shadertoy_sdf.unwrap_or("sdf".into()).as_str(),
             args.shadertoy_sdf_normal
                 .unwrap_or("normal".into())
