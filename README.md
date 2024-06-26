@@ -2,6 +2,8 @@
 
 **sdf2mesh** generates triangle meshes from [SDFs](https://www.wikiwand.com/en/Signed_distance_function) defined as WGSL shaders using dual contouring and [WGPU](https://github.com/gfx-rs/wgpu).
 
+**sdf2mesh** also can read shaders from [ShaderToy](https://shadertoy.com), see below.
+
 ![Cube with letters rendered from SDF](MartinCube.png "Cube")
 
 ## TL;DR
@@ -10,7 +12,13 @@ This example reads an SDF defined a file `examples/torus.sdf3d`, renders it with
 The resulting STL file can be viewed in a mesh viewer, like [MeshLab](https://www.meshlab.net/).
 
 ```shell
- cargo run sdf2mesh -- --sdf examples/torus.sdf3d  --resolution 128 --mesh torus.stl
+ cargo run -- --sdf examples/torus.sdf3d  --resolution 128 --mesh torus.stl
+```
+
+You can also genrate a mesh from ShaderToy:
+
+```shell
+cargo run --release -- --shadertoy-id DldfR7 --resolution 256 --mesh shadertoy.stl --bounds 5
 ```
 
 ## How it works
@@ -59,13 +67,38 @@ If we run the app with
  cargo run -- --sdf examples/torus.sdf3d  --resolution 128 --mesh torus.stl
 ```
 
-we get the following output:
+We get the following output:
 
 ![Torus rendered from SDF](Torus.png "Torus")
+
+### Generating a Mesh from ShaderToy fragment shader
+
+![Torus Knot rendered in ShaderToy](TorusKnot_ShaderToy.png "Torus rendered in ShaderToy")
+
+```shell
+cargo run -- --shadertoy-id XX3Xzl  --resolution 512 --mesh shadertoy.stl --debug-wgsl test.wgsl --bounds 2 --shadertoy-sdf map --shadertoy-sdf-normal estimateNormal
+```
+
+The shader must have at least two functions:
+
+* `float sdf(vec3 p)`: This function calculates the SDF. In the example above, we can use the `--shadertoy-sdf` a different name, e.g. `map`. However, while the name of the function can be arbitrary, its signature must always be `float (vec3 p)`.
+* `vec3 normal(vec3 p, float eps)`: This function estimates the normal of the SDF. In the example above, we can use the `--shadertoy-sdf-normal` a different name, e.g. `estimateNormal`. While the name of the function can be arbitrary, its signature must always be `vec3 (vec3 p, float eps)`.
+
+Some more considerations:
+
+* Make sure you use a proper bounding box that fits the size of your SDF. The command line argument `--bounds 2` will create a centered bounding box with size `2`. This also means you SDF should be always centered.
+* Meshes grow *O(n^3)* with resolution. This means, a mesh generated with resolution of 2048 can be become several GBs in size!
+* The dual-contouring algorithm still has some problems with certain triangle constellations and precision. In this case, an invalid quad will be created and the mesh will have a hole. This happens more often with higher resolutions.
+* Use post-processing to simplify and possibly fix your mesh.
+* If you can to use your custom shader from ShaderToy, make sure you **public + API** setting when publishing.
+
+![Torus Knot Mesh rendered in MeshLab](TorusKnot_Mesh.png "Torus Knot Mesh rendered in MeshLab")
 
 ## TODO
 
 * SDF viewer app
+* Rendering estimation
+* Better error handling
 * More primitives and built-in functions
 
 ## Known issues
