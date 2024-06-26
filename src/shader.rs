@@ -76,15 +76,14 @@ impl Sdf3DShader {
         let mut wgsl = shader.generate_wgsl_shader_code()?;
 
         wgsl.remove_function("fn main_1(")?;
-        wgsl.write_to_file("test_no_main_1.wgsl").unwrap();
-        wgsl.remove_function("fn main(")?; // Remove main function
-        wgsl.write_to_file("test_no_main.wgsl").unwrap();
+        wgsl.remove_function("fn main(")?;
+
         wgsl.remove_function("fn mainImage(")?;
-        wgsl.write_to_file("test_no_mainImage.wgsl").unwrap();
-        wgsl.remove_line("@fragment"); // Remove @fragment
+        wgsl.remove_line("@fragment"); // Remove fragment entry point
 
         if wgsl.has_function(sdf) {
             if !wgsl.has_function("sdf3d") {
+                // Generate function wrapper
                 wgsl.add_line(
                     format!("fn sdf3d(p: vec3<f32>) -> f32 {{ return {}(p); }}", sdf).as_str(),
                 );
@@ -95,8 +94,9 @@ impl Sdf3DShader {
 
         if wgsl.has_function(sdf_normal_function) {
             if !wgsl.has_function("sdf3d_normal") {
-                wgsl.add_line(
-                "fn sdf3d_normal(p: vec3<f32>, eps: f32) -> vec3<f32> { return normal(p, eps); }",
+                // Generate function wrapper for normal function
+                wgsl.add_line(format!(
+                "fn sdf3d_normal(p: vec3<f32>, eps: f32) -> vec3<f32> {{ return {}(p, eps); }}", sdf_normal_function).as_str(),
             );
             }
         } else {
