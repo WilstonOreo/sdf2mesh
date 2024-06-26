@@ -88,10 +88,10 @@ The shader will be download via ShaderToy API and will be converted from GLSL to
 
 Some more considerations:
 
-* Because the shader is compiled from GLSL to WGSL, compilation might fail in certain cases.
+* Because the shader is compiled from GLSL to WGSL, compilation might fail in certain cases. Use the debug option `--debug-wgsl test.wgsl` to write the resulting WGSL into `test.wgsl` to spot possible errors. (Filing issues is welcome :)
 * Buffers and Channels are not supported (yet).
 * Make sure you use a proper bounding box that fits the size of your SDF. The command line argument `--bounds 2` will create a centered bounding box with size `2`. This also means you SDF should be always centered.
-* Meshes grow *O(n^3)* with resolution. This means, a mesh generated with resolution of 2048 can be become several GBs in size!
+* Meshes grow *O(n^3)* with resolution. This means, a mesh generated with resolution of 2048 can become several GBs in size!
 * The dual-contouring algorithm still has some problems with certain triangle constellations and precision. In this case, an invalid quad will be created and the mesh will have a hole. This happens more often with higher resolutions.
 * Use post-processing to simplify and possibly fix your mesh.
 * If you can to use your custom shader from ShaderToy, make sure you **public + API** setting when publishing.
