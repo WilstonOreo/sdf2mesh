@@ -193,6 +193,7 @@ async fn run(args: Arguments) {
     let mut sdf3d_file = Sdf3DShader::default();
 
     if let Some(shadertoy) = &args.shadertoy {
+        log::info!("Reading SDF from ShaderToy (shader ID {})", { shadertoy });
         sdf3d_file = shader::Sdf3DShader::from_shadertoy_api(
             shadertoy,
             args.shadertoy_sdf.unwrap_or("sdf".into()).as_str(),
@@ -203,6 +204,8 @@ async fn run(args: Arguments) {
         .await
         .unwrap();
     } else if let Some(sdf) = &args.sdf {
+        log::info!("Reading SDF from {}...", sdf);
+
         sdf3d_file = shader::Sdf3DShader::from_path(sdf);
     }
 
@@ -275,12 +278,6 @@ async fn run(args: Arguments) {
     });
 
     log::info!("Wgpu context set up.");
-
-    if let Some(sdf) = &args.sdf {
-        log::info!("Reading SDF from {}...", sdf);
-    } else if let Some(shadertoy) = &args.shadertoy {
-        log::info!("Reading SDF from ShaderToy (shader ID {})", { shadertoy });
-    }
 
     let mut vertex_items =
         mesh::VertexList::with_capacity(state.dims.x as usize * state.dims.y as usize);
