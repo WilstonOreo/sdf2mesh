@@ -81,8 +81,8 @@ cargo run -- --shadertoy-id XX3Xzl  --resolution 512 --mesh shadertoy.stl --debu
 
 The shader must have at least two functions:
 
-* `float sdf(vec3 p)`: This function calculates the SDF. In the example above, we can use the `--shadertoy-sdf` a different name, e.g. `map`. However, while the name of the function can be arbitrary, its signature must always be `float (vec3 p)`.
-* `vec3 normal(vec3 p, float eps)`: This function estimates the normal of the SDF. In the example above, we can use the `--shadertoy-sdf-normal` a different name, e.g. `estimateNormal`. While the name of the function can be arbitrary, its signature must always be `vec3 (vec3 p, float eps)`.
+* `float sdf(vec3 p)`: This function calculates the SDF. In the example above, we can use the `--shadertoy-sdf` to use a different name, e.g. `map`. However, while the name of the function can be arbitrary, its signature must always be `float (vec3 p)`.
+* `vec3 normal(vec3 p, float eps)`: This function estimates the normal of the SDF. In the example above, we can use the `--shadertoy-sdf-normal` to use a different name, e.g. `estimateNormal`. While the name of the function can be arbitrary, its signature must always be `vec3 (vec3 p, float eps)`.
 
 The shader will be download via ShaderToy API and will be converted from GLSL to WGSL using [naga](https://github.com/gfx-rs/wgpu/tree/trunk/naga).
 
