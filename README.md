@@ -4,24 +4,40 @@
 
 SDF can process the following inputs:
 
-* An SDFs given as WGSL shader, see `examples/torus.sdf3d`
+* SDFs given as WGSL shader, see `examples/torus.sdf3d`
+* SDFs given as GLSL shader, see `examples/mandelmesh.frag`
 * Shaders from [ShaderToy](https://shadertoy.com), retrieved via ShaderToy API, see below.
 
 ![Cube with letters rendered from SDF](MartinCube.png "Cube")
 
-## TL;DR
+## Examples
 
-This example reads an SDF defined a file `examples/torus.sdf3d`, renders it with resolution 128x128x128 and writes it to `torus.stl`.
-The resulting STL file can be viewed in a mesh viewer, like [MeshLab](https://www.meshlab.net/).
+The example `examples/torus.sdf3d` reads an SDF defined in this file and renders it with resolution 128x128x128 and writes it to `torus.stl`.
 
 ```shell
  cargo run -- --sdf examples/torus.sdf3d  --resolution 128 --mesh torus.stl
 ```
 
-You can also generate a mesh from ShaderToy:
+If we run the app with
 
 ```shell
-cargo run --release -- --shadertoy-id DldfR7 --resolution 256 --mesh shadertoy.stl --bounds 5
+ cargo run -- --sdf examples/torus.sdf3d  --resolution 128 --mesh torus.stl
+```
+
+The output mesh looks like this:
+
+![Torus rendered from SDF](Torus.png "Torus")
+
+It is also possible to generate a mesh via a GLSL fragment shader that has a SDF function with the signature `float (vec3)`:
+
+```shell
+cargo run -- --glsl .\examples\mandelmesh.frag --resolution 512 --mesh mandelmesh.stl --bounds 5
+```
+
+You can also generate a mesh from ShaderToy directly:
+
+```shell
+cargo run -- --shadertoy-id DldfR7 --resolution 256 --mesh shadertoy.stl --bounds 5
 ```
 
 ## How it works
