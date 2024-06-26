@@ -2,17 +2,8 @@ static API_KEY: &str = "rdnjhn";
 
 use serde::Deserialize;
 
-#[derive(clap::Parser, Debug, Deserialize)]
-#[command(version, about, long_about = None)]
-struct Args {
-    #[arg(short, long)]
-    shader_id: String,
-    //#[arg(short, long)]
-    //output: String,
-}
-
 #[derive(Debug, Deserialize)]
-struct ShaderInfo {
+pub struct ShaderInfo {
     id: String,
     date: String,
     viewed: i32,
@@ -30,13 +21,13 @@ struct ShaderInfo {
 }
 
 #[derive(Debug, Deserialize)]
-struct ShaderOutput {
+pub struct ShaderOutput {
     id: i32,
     channel: i32,
 }
 
 #[derive(Debug, Deserialize)]
-struct RenderPass {
+pub struct RenderPass {
     inputs: Vec<i32>,
     outputs: Vec<ShaderOutput>,
     code: String,
@@ -45,19 +36,22 @@ struct RenderPass {
     r#type: String,
 }
 #[derive(Debug, Deserialize)]
-struct Shader {
+pub struct Shader {
     ver: String,
     info: ShaderInfo,
     renderpass: Vec<RenderPass>,
 }
 
 #[derive(Debug)]
-enum ShaderProcessingError {
+pub enum ShaderProcessingError {
     RequestError(reqwest::Error),
     ShaderError(String),
     ParseError(naga::front::glsl::ParseError),
     WgslError(naga::back::wgsl::Error),
     ValidationError(naga::WithSpan<naga::valid::ValidationError>),
+
+    /// Error when the SDF is missing in the shader
+    MissingSdf(String),
 }
 
 impl From<reqwest::Error> for ShaderProcessingError {
@@ -91,7 +85,7 @@ impl From<naga::WithSpan<naga::valid::ValidationError>> for ShaderProcessingErro
 }
 
 #[derive(Debug, Deserialize)]
-enum ShaderToyApiResponse {
+pub enum ShaderToyApiResponse {
     Shader(Shader),
     Error(String),
 }
@@ -186,10 +180,6 @@ pub fn convert_glsl_to_wgsl(glsl: &str) -> Result<String, ShaderProcessingError>
 pub struct WgslShaderCode(String);
 
 impl WgslShaderCode {
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
     pub fn remove_function(&mut self, function_name: &str) -> Result<(), ShaderProcessingError> {
         self.0 = remove_function_from_wgsl(&self.0, function_name)?;
         Ok(())
@@ -206,6 +196,17 @@ impl WgslShaderCode {
     ) -> Result<(), ShaderProcessingError> {
         self.0 = rename_function_in_wgsl(&self.0, old_function_name, new_function_name)?;
         Ok(())
+    }
+
+    pub fn add_line(&mut self, line: &str) {
+        self.0 += line;
+        self.0 += "\n";
+    }
+}
+
+impl std::fmt::Display for WgslShaderCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

@@ -5,7 +5,9 @@ use common_macros::hash_map;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Lines, Result, Write};
+use std::io::{BufRead, BufReader, Lines, Write};
+
+use crate::shadertoy;
 
 lazy_static! {
     static ref BUILTIN_MODULES: std::collections::HashMap<&'static str, &'static str> = {
@@ -19,7 +21,9 @@ lazy_static! {
 
 // The output is wrapped in a Result to allow matching on errors
 // Returns an Iterator to the Reader of the lines of the file.
-pub fn read_lines<P: AsRef<std::path::Path>>(filename: P) -> Result<Lines<BufReader<File>>> {
+pub fn read_lines<P: AsRef<std::path::Path>>(
+    filename: P,
+) -> std::io::Result<Lines<BufReader<File>>> {
     let file = File::open(filename)?;
     Ok(std::io::BufReader::new(file).lines())
 }
@@ -57,11 +61,41 @@ impl SDF3DShader {
         s
     }
 
-    /*     pub fn from_shadertoy_api(shader_id: &str) -> Self {
-            let mut s = Self {
-            }
+    pub async fn from_shadertoy_api(
+        shader_id: &str,
+    ) -> Result<Self, shadertoy::ShaderProcessingError> {
+        let mut s = Self {
+            source: String::new(),
+            modules: HashMap::new(),
+        };
+
+        let shader = shadertoy::Shader::from_api(shader_id).await?;
+        let mut wgsl = shader.generate_wgsl_shader_code()?;
+
+        wgsl.remove_function("fn main_1")?;
+        wgsl.remove_function("@fragment")?; // Remove main function
+        wgsl.remove_function("fn mainImage(")?;
+
+        if wgsl.has_function("normal")? {
+            wgsl.rename_function("normal", "sdf3d_normal")?;
+        } else {
+            wgsl.add_line("use sdf3d::normal;");
+            s.add_module("sdf3d::normal", |w| {
+                write!(w, "{}", BUILTIN_MODULES["sdf3d::normal"])
+            });
         }
-    */
+
+        if wgsl.has_function("map")? {
+            wgsl.rename_function("map", "sdf3d")?;
+        } else {
+            return Err(shadertoy::ShaderProcessingError::MissingSdf("map".into()));
+        }
+
+        s.source = wgsl.to_string();
+
+        Ok(s)
+    }
+
     pub fn add_module(
         &mut self,
         name: &str,
