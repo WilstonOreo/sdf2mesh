@@ -234,8 +234,6 @@ fn remove_function_from_wgsl(
 
 fn wgsl_has_function(wgsl: &str, function_name: &str) -> Result<bool, ShaderProcessingError> {
     let lines = wgsl.lines();
-    let mut new_wgsl = String::new();
-    let mut in_function = false;
     let mut function_found = false;
     for line in lines {
         let line = line.trim();
@@ -267,13 +265,12 @@ fn rename_function_in_wgsl(
     let mut function_found = false;
     for line in lines {
         let line = line.trim();
-        if line.starts_with(format!("{old_function_name}(").as_str()) {
+        if line.starts_with(format!("fn {old_function_name}(").as_str()) {
             in_function = true;
             function_found = true;
             new_wgsl += line
                 .replacen(old_function_name, new_function_name, 1)
                 .as_str();
-            format!("{}\n", new_function_name).as_str();
         } else {
             new_wgsl += format!("{}\n", line).as_str();
         }
@@ -331,6 +328,8 @@ fn main() {
 
         assert!(new_wgsl.trim().is_empty());
     }
+
+    #[test]
 
     fn rename_function() {
         let in_wgsl = r#"fn normal(p_4: vec3<f32>, epsilon: f32) -> vec3<f32>"#;
