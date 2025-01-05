@@ -1,7 +1,10 @@
 [package]
 name = "sdf2mesh"
+description = "A tool to convert SDFs to triangle meshes using wgpu and dual contouring"
+repository = "https://github.com/WilstonOreo/sdf2mesh"
 version = "0.1.0"
 edition = "2021"
+license = "AGPL-3.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
