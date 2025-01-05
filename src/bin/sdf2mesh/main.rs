@@ -188,6 +188,7 @@ async fn run(args: Arguments) {
                 label: None,
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::downlevel_defaults(),
+                memory_hints: wgpu::MemoryHints::default(),
             },
             None,
         )
@@ -283,8 +284,9 @@ async fn run(args: Arguments) {
         label: None,
         layout: Some(&pipeline_layout),
         module: &shader,
-        entry_point: "main",
+        entry_point: Some("main"),
         compilation_options: Default::default(),
+        cache: None,
     });
 
     log::info!("Wgpu context set up.");

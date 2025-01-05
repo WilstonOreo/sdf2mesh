@@ -71,7 +71,7 @@ pub struct Shader {
 pub enum ShaderProcessingError {
     RequestError(reqwest::Error),
     ShaderError(String),
-    ParseError(naga::front::glsl::ParseError),
+    ParseErrors(naga::front::glsl::ParseErrors),
     WgslError(naga::back::wgsl::Error),
     ValidationError(naga::WithSpan<naga::valid::ValidationError>),
 
@@ -91,9 +91,9 @@ impl From<String> for ShaderProcessingError {
     }
 }
 
-impl From<naga::front::glsl::ParseError> for ShaderProcessingError {
-    fn from(error: naga::front::glsl::ParseError) -> Self {
-        ShaderProcessingError::ParseError(error)
+impl From<naga::front::glsl::ParseErrors> for ShaderProcessingError {
+    fn from(error: naga::front::glsl::ParseErrors) -> Self {
+        ShaderProcessingError::ParseErrors(error)
     }
 }
 
