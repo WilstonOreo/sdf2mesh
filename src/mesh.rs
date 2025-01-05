@@ -41,7 +41,7 @@ impl<'a> STLWriter<'a> {
     }
 }
 
-impl<'a> Drop for STLWriter<'a> {
+impl Drop for STLWriter<'_> {
     fn drop(&mut self) {
         writeln!(self.writer, "endsolid").unwrap();
     }
@@ -323,7 +323,7 @@ impl VertexList {
         indices
     }
 
-    /// @brief Returns the index of the vertex at the given position or u32::MAX if not found
+    /// Returns the index of the vertex at the given position or u32::MAX if not found
     fn vertex_index(&self, x: u16, y: u16, z: u16) -> u32 {
         self.0
             .binary_search_by_key(&VertexListItem::compute_index(x, y, z), |item| item.index())

@@ -19,8 +19,8 @@ lazy_static! {
     };
 }
 
-// The output is wrapped in a Result to allow matching on errors
-// Returns an Iterator to the Reader of the lines of the file.
+/// The output is wrapped in a Result to allow matching on errors
+/// Returns an Iterator to the Reader of the lines of the file.
 pub fn read_lines<P: AsRef<std::path::Path>>(
     filename: P,
 ) -> std::io::Result<Lines<BufReader<File>>> {
@@ -30,13 +30,17 @@ pub fn read_lines<P: AsRef<std::path::Path>>(
 
 type ModuleHandlers = HashMap<String, Box<dyn Fn(&mut dyn Write) -> std::io::Result<()>>>;
 
+/// Our shader
 #[derive(Default)]
 pub struct Sdf3DShader {
+    /// Source code of the shader
     source: String,
+    /// Handlers to import modules
     modules: ModuleHandlers,
 }
 
 impl Sdf3DShader {
+    /// Construct a new `Sdf3DShader` from a path
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Self {
         let mut s = Self {
             source: String::new(),
@@ -62,6 +66,10 @@ impl Sdf3DShader {
         s
     }
 
+    /// Construct a new `Sdf3DShader` from glsl shader
+    ///
+    /// * `path`: Path of the GLSL
+    /// * `sdf`: Function name of the SDF function, e.g. `float sdf(vec3)`
     pub fn from_glsl_fragment_shader(
         path: impl AsRef<std::path::Path>,
         sdf: &str,
@@ -95,6 +103,10 @@ impl Sdf3DShader {
         })
     }
 
+    /// Construct a new Sdf3DShader from the ShaderToy API
+    ///
+    /// * `shader_id`: Id of the ShaderToy shader, e.g. DldfR7
+    /// * `sdf`: Function name of the SDF function, e.g. `float sdf(vec3)`
     pub async fn from_shadertoy_api(
         shader_id: &str,
         sdf: &str,
@@ -131,7 +143,7 @@ impl Sdf3DShader {
         })
     }
 
-    pub fn add_module(
+    fn add_module(
         &mut self,
         name: &str,
         module: impl Fn(&mut dyn Write) -> std::io::Result<()> + 'static,
@@ -190,18 +202,21 @@ impl Sdf3DShader {
         Ok(())
     }
 
+    /// Write shader to file
     pub fn write_to_file(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
         let mut f = std::io::BufWriter::new(File::create(path)?);
         write!(f, "{}", self.source)
     }
 
-    pub fn shader_source(&self, path: impl AsRef<std::path::Path>) -> String {
+    /// Return shader source as string
+    fn shader_source(&self, path: impl AsRef<std::path::Path>) -> String {
         let mut w = Vec::new();
         let _ = self.shader_source_input(path, &mut w);
 
         std::str::from_utf8(w.as_slice()).unwrap().to_string()
     }
 
+    /// Create a `wgpu::ShaderModule`
     pub fn create_shader_module(&self, device: &wgpu::Device) -> wgpu::ShaderModule {
         device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
